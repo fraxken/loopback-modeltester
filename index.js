@@ -131,7 +131,7 @@ function loopbackModelTester(app, config) {
           Object.keys(variables).forEach((varName) => {
             const varOptions = variables[varName];
             if (has(body, varName)) {
-              const registerVar = 'undefined' === typeof(varOptions.register) ? false : true;
+              const registerVar = 'boolean' === typeof(varOptions.register) ? varOptions.register : true;
               const varValue = get(body, varName);
               if(registerVar) {
                 context[varOptions.name || varName] = varValue;
