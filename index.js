@@ -93,8 +93,9 @@ function loopbackModelTester(app, config) {
 
         // Check return Type
         if ('string' === typeof(expect.bodyType)) {
-          const isType = is(body);
-          assert.equal(isType, expect.bodyType.toLowerCase(), `Invalid type for the returned response body. Should be ${chalk.green.bold(expect.bodyType)} but detected as ${chalk.red.bold(isType)}`);
+          const isType = is(body).toLowerCase();
+          expect.bodyType = expect.bodyType.toLowerCase();
+          assert.equal(isType, expect.bodyType, `Invalid type for the returned response body. Should be ${chalk.green.bold(expect.bodyType)} but detected as ${chalk.red.bold(isType)}`);
 
           // Check properties keys if the returned type is an Object!
           if (isType === 'Object' && 'object' === typeof(expect.properties)) {
