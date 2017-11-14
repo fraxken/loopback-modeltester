@@ -74,6 +74,7 @@ function loopbackModelTester(app, config) {
         }
       }
 
+      console.time(route.title);
       console.log(`Run test [${chalk.yellow.bold(testIndex)}] - ${chalk.green.bold(route.title) || ''}`);
       testIndex++;
       request(reqOption).then((resp) => {
@@ -137,12 +138,15 @@ function loopbackModelTester(app, config) {
             }
           });
         }
+
+        console.timeEnd(route.title);
         done(null);
         return null;
       }).catch(done);
     }, (err) => {
       if (err) {
-        console.error(chalk.bold.red(err));
+        console.error(`statusCode: ${chalk.bold.yellow(err.statusCode)}`);
+        console.error(`message: ${chalk.bold.red(err.message)}`);
         process.exit(1);
       }
       process.exit(0);
