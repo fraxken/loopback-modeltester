@@ -75,16 +75,17 @@ function loopbackModelTester(app, config) {
       }
 
       console.time(route.title);
-      console.log(`Run test [${chalk.yellow.bold(testIndex)}] - ${chalk.green.bold(route.title) || ''}`);
+      console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${chalk.green.bold(route.title) || ''}`);
       testIndex++;
       request(reqOption).then((resp) => {
         const { body, statusCode, headers } = resp;
 
         if (route.debug === true) {
+          console.log(chalk.magenta.bold('[DEBUG ON]'));
           console.log('--> Body :');
-          console.log(chalk.gray.bold(body));
+          console.log(chalk.gray.bold(JSON.stringify(body, null, 2)));
           console.log('\n--> Headers :');
-          console.log(chalk.gray.bold(headers));
+          console.log(chalk.gray.bold(JSON.stringify(headers, null, 2)));
         }
 
         // Check response statusCode
