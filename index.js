@@ -29,7 +29,7 @@ function loopbackModelTester(app, config) {
     let testIndex = 0;
     let context = {};
     eachSeries(config, function(route, done) {
-      route.url.replace(/\${([a-zA-Z0-9.]+)}/g, function(match, matchValue, offset, str) {
+      route.url.replace(/\${([a-zA-Z0-9.]+)}/g, function(match, matchValue) {
         if (context.hasOwnProperty(matchValue) === false) {
           return;
         }
@@ -131,7 +131,16 @@ function loopbackModelTester(app, config) {
           Object.keys(variables).forEach((varName) => {
             const varOptions = variables[varName];
             if (has(body, varName)) {
-              context[varOptions.name || varName] = get(body, varName);
+              const registerVar = 'undefined' === typeof(varOptions.register) ? false : true;
+              const varValue = get(body, varName);
+              if(registerVar) {
+                context[varOptions.name || varName] = varValue;
+              }
+              if ('undefined' !== typeof(varOptions.value)) {
+                if(varValue !== varOptions.value) {
+                  throw new Error(`Variable ${chalk.bold.yellow(varName)} value should be ${chalk.green.bold(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
+                }
+              }
             } else {
               if (varOptions.required === true) {
                 throw new Error(`Variable ${chalk.bold.yellow(varName)} is missing from the response body. Cannot be applied to the test Context!`);
@@ -150,11 +159,12 @@ function loopbackModelTester(app, config) {
         console.error(`message: ${chalk.bold.red(err.message)}`);
         process.exit(1);
       }
+      console.log('\n\n' + chalk.green.bold('All tests successfully passed!'));
       process.exit(0);
     });
   });
   app.start();
 }
 
-// Export loopback3RoutesTester handler
+// Export loopbackModelTester handler
 module.exports = loopbackModelTester;
