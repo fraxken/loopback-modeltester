@@ -9,6 +9,8 @@ npm install loopback-modeltester --save
 
 # Usage example
 
+Configure a JSON file with all use cases and routes to test : 
+
 ```json
 [
   {
@@ -84,4 +86,24 @@ npm install loopback-modeltester --save
     }
   }
 ]
+```
+
+Create a test/test.js file at the root of your project with this content 
+
+```js
+'use strict';
+
+// Setup manually dev env (setup the env here, or not if not required).
+process.env.NODE_ENV = 'development';
+
+// Require Packages
+const loopbackModelTester = require('loopback-modeltester');
+const app = require('../server/server');
+const fileStorageTest = require('../server/model-test.json'); // Require your JSON here!
+
+try {
+  loopbackModelTester(app, fileStorageTest);
+} catch (E) {
+  console.error(E);
+}
 ```
