@@ -1,0 +1,29 @@
+{
+  "name": "loopback-modeltester",
+  "version": "1.0.0",
+  "description": "Loopback 3.X - Routes and Models unit testing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fraxken/loopback-modeltester.git"
+  },
+  "author": "GENTILHOMME Thomas",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fraxken/loopback-modeltester/issues"
+  },
+  "homepage": "https://github.com/fraxken/loopback-modeltester#readme",
+  "dependencies": {
+    "@sindresorhus/is": "^0.5.0",
+    "chalk": "^2.3.0",
+    "lodash": "^4.17.4",
+    "mime-types": "^2.1.17",
+    "request-promise": "^4.2.2"
+  },
+  "devDependencies": {
+    "eslint": "^4.11.0"
+  }
+}
