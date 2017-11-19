@@ -13,6 +13,8 @@ const is = require('@sindresorhus/is');
 const mime = require('mime-types');
 const chalk = require('chalk');
 
+const warn = chalk.yellow.bold;
+
 function loopbackModelTester(app, config) {
   if ('undefined' === typeof(app)) {
     throw new TypeError('App cannot be undefined!');
@@ -75,7 +77,8 @@ function loopbackModelTester(app, config) {
       }
 
       console.time(route.title);
-      console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${chalk.green.bold(route.title) || ''}`);
+      console.log(`------------------------------------------------`);
+      console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${warn(route.title) || ''}`);
       testIndex++;
       request(reqOption).then((resp) => {
         const { body, statusCode, headers } = resp;
@@ -90,41 +93,49 @@ function loopbackModelTester(app, config) {
 
         // Check response statusCode
         assert.equal(statusCode, expect.statusCode, `Invalid response statusCode. Should be ${chalk.green.bold(expect)} but returned code ${chalk.red.bold(statusCode)}`);
+        console.log(`    statusCode = ${chalk.green.bold(expect.statusCode)}`);
 
         // Check return Type
         if ('string' === typeof(expect.bodyType)) {
           const isType = is(body).toLowerCase();
           expect.bodyType = expect.bodyType.toLowerCase();
           assert.equal(isType, expect.bodyType, `Invalid type for the returned response body. Should be ${chalk.green.bold(expect.bodyType)} but detected as ${chalk.red.bold(isType)}`);
+          console.log(`    bodyType = ${chalk.green.bold(expect.bodyType)}`);
 
           // Check properties keys if the returned type is an Object!
           if (isType === 'Object' && 'object' === typeof(expect.properties)) {
+            console.log(chalk.bold.cyan('    -> Body properties ='));
             Object.keys(expect.properties).forEach((key) => {
               const propertyType = expect.properties[key].toLowerCase();
               if (!has(body, key)) {
                 throw new Error(`Missing body response key ${key}`);
               }
+              console.log(`        Key ${warn(key)}`);
               if (propertyType === 'any') return;
               const bodyType = typeof(get(body, key));
               if (bodyType !== propertyType) {
                 throw new TypeError(`Property ${chalk.yellow.bold(key)} should be a ${chalk.green.bold(propertyType)} but the returned property was ${chalk.red.bold(bodyType)}`);
               }
+              console.log(`            = ${chalk.bold.green(propertyType)}`);
             });
           }
         }
         
         // Check header value!
         if ('object' === typeof(expect.headers)) {
+          console.log(chalk.cyan.bold('    -> Header properties :'))
           Object.keys(expect.headers).forEach((headerKey) => {
             headerKey = headerKey.toLowerCase();
             if (headers.hasOwnProperty(headerKey) === false) {
               throw new Error(`Key ${chalk.yellow.bold(headerKey)} is not present in the response headers!`);
             }
+            console.log(`        Key ${warn(headerKey)}`);
             assert.equal(
               headers[headerKey].includes(expect.headers[headerKey]), 
               true, 
               `Invalid headers value for the key ${chalk.bold.yellow(headerKey)}. Should be (or contains) ${chalk.bold.green(expect.headers[headerKey])} but was ${chalk.bold.red(headers[headerKey])}}`
             );
+            console.log(`            = ${chalk.bold.green(expect.headers[headerKey])}`);
           });
         }
 
