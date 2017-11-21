@@ -31,6 +31,9 @@ function loopbackModelTester(app, config) {
     let testIndex = 0;
     let context = {};
     eachSeries(config, function(route, done) {
+      if (route.skip === true) {
+        return done();
+      }
       route.url.replace(/\${([a-zA-Z0-9.]+)}/g, function(match, matchValue) {
         if (context.hasOwnProperty(matchValue) === false) {
           return;
@@ -103,20 +106,19 @@ function loopbackModelTester(app, config) {
           console.log(`    bodyType = ${chalk.green.bold(expect.bodyType)}`);
 
           // Check properties keys if the returned type is an Object!
-          if (isType === 'Object' && 'object' === typeof(expect.properties)) {
+          if (isType === 'object' && 'object' === typeof(expect.properties)) {
             console.log(chalk.bold.cyan('    -> Body properties ='));
             Object.keys(expect.properties).forEach((key) => {
               const propertyType = expect.properties[key].toLowerCase();
               if (!has(body, key)) {
                 throw new Error(`Missing body response key ${key}`);
               }
-              console.log(`        Key ${warn(key)}`);
               if (propertyType === 'any') return;
-              const bodyType = typeof(get(body, key));
+              const bodyType = is(get(body, key)).toLowerCase();
               if (bodyType !== propertyType) {
-                throw new TypeError(`Property ${chalk.yellow.bold(key)} should be a ${chalk.green.bold(propertyType)} but the returned property was ${chalk.red.bold(bodyType)}`);
+                throw new TypeError(`Property ${chalk.blue.bold(key)} should be ${chalk.green.bold(propertyType)} but the returned property was ${chalk.yellow.bold(bodyType)}`);
               }
-              console.log(`            = ${chalk.bold.green(propertyType)}`);
+              console.log(`        Key: ${warn(key)} = ${chalk.bold.green(propertyType)}`);
             });
           }
         }
@@ -127,15 +129,14 @@ function loopbackModelTester(app, config) {
           Object.keys(expect.headers).forEach((headerKey) => {
             headerKey = headerKey.toLowerCase();
             if (headers.hasOwnProperty(headerKey) === false) {
-              throw new Error(`Key ${chalk.yellow.bold(headerKey)} is not present in the response headers!`);
+              throw new Error(`Key ${chalk.green.bold(headerKey)} is not present in the response headers!`);
             }
-            console.log(`        Key ${warn(headerKey)}`);
             assert.equal(
               headers[headerKey].includes(expect.headers[headerKey]), 
               true, 
-              `Invalid headers value for the key ${chalk.bold.yellow(headerKey)}. Should be (or contains) ${chalk.bold.green(expect.headers[headerKey])} but was ${chalk.bold.red(headers[headerKey])}}`
+              `Invalid headers value for the key ${chalk.bold.blue(headerKey)}. Should be (or contains) ${chalk.bold.green(expect.headers[headerKey])} but was ${chalk.bold.red(headers[headerKey])}}`
             );
-            console.log(`            = ${chalk.bold.green(expect.headers[headerKey])}`);
+            console.log(`        Key: ${warn(headerKey)} = ${chalk.bold.green(expect.headers[headerKey])}`);
           });
         }
 
@@ -150,12 +151,12 @@ function loopbackModelTester(app, config) {
               }
               if ('undefined' !== typeof(varOptions.value)) {
                 if(varValue !== varOptions.value) {
-                  throw new Error(`Variable ${chalk.bold.yellow(varName)} value should be ${chalk.green.bold(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
+                  throw new Error(`Variable ${chalk.bold.green(varName)} value should be ${chalk.blue.bold(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
                 }
               }
             } else {
               if (varOptions.required === true) {
-                throw new Error(`Variable ${chalk.bold.yellow(varName)} is missing from the response body. Cannot be applied to the test Context!`);
+                throw new Error(`Variable ${chalk.bold.green(varName)} is missing from the response body. Cannot be applied to the test Context!`);
               }
             }
           });
@@ -167,8 +168,8 @@ function loopbackModelTester(app, config) {
       }).catch(done);
     }, (err) => {
       if (err) {
-        console.error(`statusCode: ${chalk.bold.yellow(err.statusCode || 'unknow code')}`);
-        console.error(`message: ${chalk.bold.yellow(err.message)}`);
+        console.error(`\nstatusCode: ${warn(err.statusCode || 'unknow code')}`);
+        console.error(`message: ${err.message}`);
         process.exit(1);
       }
       console.log('\n\n' + chalk.green.bold('All tests successfully passed!'));
