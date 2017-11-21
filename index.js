@@ -31,15 +31,34 @@ function loopbackModelTester(app, config) {
     let testIndex = 0;
     let context = {};
     eachSeries(config, function(route, done) {
+      console.time(route.title);
+      console.log(`------------------------------------------------`);
+      console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${warn(route.title) || ''}`);
+      testIndex++;
       if (route.skip === true) {
+        console.log(chalk.blue.bold('Test skipped...'));
         return done();
       }
-      route.url.replace(/\${([a-zA-Z0-9.]+)}/g, function(match, matchValue) {
+
+      route.url.replace(/\${([a-zA-Z0-9._-]+)}/g, function(match, matchValue) {
         if (context.hasOwnProperty(matchValue) === false) {
           return;
         }
         route.url = route.url.replace(new RegExp('\\' + match, 'g'), context[matchValue]);
       });
+
+      // Hydrate context for headers keys!
+      if('object' === typeof(route.headers)) {
+        Object.keys(route.headers).forEach((key) => {
+          route.headers[key].replace(/\${([a-zA-Z0-9._-]+)}/g, function(match, matchValue) {
+            if (context.hasOwnProperty(matchValue) === false) {
+              return;
+            }
+            route.headers[key] = route.headers[key].replace(new RegExp('\\' + match, 'g'), context[matchValue]);
+          });
+        });
+      }
+
       const reqOption = {
         method: route.method || 'GET',
         url: `${baseUrl}/api${typeof(route.model) === 'string' ? '/' + route.model : ''}/${route.url}`,
@@ -50,6 +69,13 @@ function loopbackModelTester(app, config) {
         resolveWithFullResponse: true,
         json: true
       };
+
+      if (route.debug === true) {
+        console.log(chalk.magenta.bold('[DEBUG ON]'));
+        console.log('--> Request options :');
+        console.log(chalk.gray.bold(JSON.stringify(reqOption, null, 2)));
+      }
+
       const { expect = {}, file, variables } = route;
       if ('undefined' === typeof(expect.statusCode)) {
         expect['statusCode'] = 200;
@@ -78,16 +104,11 @@ function loopbackModelTester(app, config) {
           return done(E);
         }
       }
-
-      console.time(route.title);
-      console.log(`------------------------------------------------`);
-      console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${warn(route.title) || ''}`);
-      testIndex++;
+      
       request(reqOption).then((resp) => {
         const { body, statusCode, headers } = resp;
 
         if (route.debug === true) {
-          console.log(chalk.magenta.bold('[DEBUG ON]'));
           console.log('--> Body :');
           console.log(chalk.gray.bold(JSON.stringify(body, null, 2)));
           console.log('\n--> Headers :');
@@ -147,7 +168,9 @@ function loopbackModelTester(app, config) {
               const registerVar = 'boolean' === typeof(varOptions.register) ? varOptions.register : true;
               const varValue = get(body, varName);
               if(registerVar) {
-                context[varOptions.name || varName] = varValue;
+                const finalVarName = varOptions.name || varName;
+                context[finalVarName] = varValue;
+                console.log(`Assign new variable ${chalk.bold.blue(finalVarName)} with value ${chalk.bold.yellow(varValue)} into the context!`);
               }
               if ('undefined' !== typeof(varOptions.value)) {
                 if(varValue !== varOptions.value) {
