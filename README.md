@@ -140,3 +140,16 @@ Properties values are JavaScript types..
 Assign new variables into the context (to be used after with `${varName}`). It useful when you want to create a chainable scenario.
 
 Example 
+
+```
+"variables": {
+     "data[0]._id": {
+          "required": true,
+          "name": "user1_id"
+     },
+     "data[1]._id": {
+          "required": true,
+          "name": "user2_id"
+     }
+}
+```
