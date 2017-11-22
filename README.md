@@ -110,7 +110,7 @@ try {
 
 ## Documentation
 
-For each tests, all followings keys are allowed
+For each tests, all followings keys are allowed. All fields based upon JavaScript types are checked with the lib @sindresorhus/is (So check this package to be sure you entered the right type).
 
 | Key | Type | Default Value | Description |
 | --- | --- | --- | --- |
@@ -120,8 +120,23 @@ For each tests, all followings keys are allowed
 | method | String | GET | The default HTTP Verbose method |
 | model | String | N.A | The model name in the plural form |
 | url | String | N.A | The request url |
+| file | Object | N.A | FormData to upload a file |
 | expect | Object | N.A | The expected response from the request |
 | variables | Object | N.A | Variables to assign to the context based upon the Body response | 
 
 #### Expect properties
+
+| Key | Type | Default Value | Description |
+| --- | --- | --- | --- |
+| statusCode | Number | 200 | The expected HTTP status code |
+| bodyType | String | N.A | The expected body type (JavaScript) |
+| headers | Object | N.A | All headers key expected, with the value not matched explicitely |
+| properties | Object | N.A | All body properties expected |
+
+Properties values are JavaScript types..
+
 #### Variables properties
+
+Assign new variables into the context (to be used after with `${varName}`). It useful when you want to create a chainable scenario.
+
+Example 
