@@ -50,6 +50,7 @@ function loopbackModelTester(app, config) {
       // Hydrate context for headers keys!
       if('object' === typeof(route.headers)) {
         Object.keys(route.headers).forEach((key) => {
+          if(is(route.headers[key]) !== 'string') return;
           route.headers[key].replace(/\${([a-zA-Z0-9._-]+)}/g, function(match, matchValue) {
             if (context.hasOwnProperty(matchValue) === false) {
               return;
