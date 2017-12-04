@@ -44,7 +44,7 @@ function loopbackModelTester(app, config) {
         if (context.hasOwnProperty(matchValue) === false) {
           return;
         }
-        route.url = route.url.replace(new RegExp('\\' + match, 'g'), context[matchValue]);
+        return context[matchValue];
       });
 
       // Hydrate context for headers keys!
