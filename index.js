@@ -40,11 +40,11 @@ function loopbackModelTester(app, config) {
         return done();
       }
 
-      route.url.replace(/\${([a-zA-Z0-9._-]+)}/g, function(match, matchValue) {
+      route.url = route.url.replace(/\${([a-zA-Z0-9._-]+)}/g, function(match, matchValue) {
         if (context.hasOwnProperty(matchValue) === false) {
           return;
         }
-        route.url = route.url.replace(new RegExp('\\' + match, 'g'), context[matchValue]);
+        return context[matchValue];
       });
 
       // Hydrate context for headers keys!
