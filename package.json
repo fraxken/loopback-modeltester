@@ -1,6 +1,6 @@
 {
   "name": "loopback-modeltester",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Loopback 3.X - Routes and Models unit testing",
   "main": "index.js",
   "scripts": {

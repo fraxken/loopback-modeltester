@@ -15,7 +15,7 @@ const chalk = require('chalk');
 
 const warn = chalk.yellow.bold;
 
-function loopbackModelTester(app, config) {
+function loopbackModelTester(app, config, {basePath = 'api'}) {
   if ('undefined' === typeof(app)) {
     throw new TypeError('App cannot be undefined!');
   }
@@ -32,7 +32,7 @@ function loopbackModelTester(app, config) {
     let context = {};
     eachSeries(config, function(route, done) {
       console.time(route.title);
-      console.log(`------------------------------------------------`);
+      console.log('------------------------------------------------');
       console.log(`\nRun test [${chalk.yellow.bold(testIndex)}] - ${warn(route.title) || ''}`);
       testIndex++;
       if (route.skip === true) {
@@ -62,7 +62,7 @@ function loopbackModelTester(app, config) {
 
       const reqOption = {
         method: route.method || 'GET',
-        url: `${baseUrl}/api${typeof(route.model) === 'string' ? '/' + route.model : ''}/${route.url}`,
+        url: `${baseUrl}/${basePath}${typeof(route.model) === 'string' ? '/' + route.model : ''}/${route.url}`,
         formData: route.formData || void 0,
         body: route.body || void 0,
         headers: route.headers || void 0,
