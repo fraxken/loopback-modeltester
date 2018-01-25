@@ -4,6 +4,7 @@
 const assert = require("assert");
 const { createReadStream } = require("fs");
 const { basename } = require("path");
+const events = require('events');
 
 // Require npm Packages
 const request = require("request-promise");
@@ -23,6 +24,12 @@ const {
 // Variable REGEXP
 const variableRegexp = /\${([a-zA-Z0-9._-]+)}/g;
 
+const IDefaultRequest = {
+	method: "GET",
+	resolveWithFullResponse: true,
+	json: true
+};
+
 /**
  * @class loopbackTest
  * @classdesc Run unit tests
@@ -33,7 +40,7 @@ const variableRegexp = /\${([a-zA-Z0-9._-]+)}/g;
  * @property {String} basePath
  * @property {Object} context
  */
-class loopbackTest {
+class loopbackTest extends events {
 
 	/**
 	 * @constructor
@@ -43,6 +50,7 @@ class loopbackTest {
 	 * @throws {TypeError}
 	 */
 	constructor(app, basePath = "api") {
+		super();
 		if (is.nullOrUndefined(app)) {
 			throw new TypeError("App argument cannot be undefined!");
 		}
@@ -52,23 +60,144 @@ class loopbackTest {
 		this.tests = [];
 		this.basePath = basePath;
 
-		this.app.on('started', this.run.bind(this));
-		this.app.start();
+		this.app.on('started', async() => {
+			try {
+				await this.run();
+			}
+			catch(E) {
+				this.emit('error', E.message);
+				process.exit(0);
+			}
+		});
+		process.nextTick(() => {
+			this.app.start();
+		});
 	}
 
 	/**
 	 * @private
-	 * @method _getContextVariable
-	 * @desc Get variable in Regexp (shorthand private method)
-	 * @param {*} match match
-	 * @param {*} matchValue matchedValue
-	 * @returns {void|String} Context variable!
+	 * @method _checkBodyExpectation
+	 * @desc Check returned body (it should match our expectation)
+	 * @memberof loopbackTest#
+	 * @param {!Object} body Request body object!
+	 * @param {!Object} expected Expected Object
+	 * @returns {void}
+	 *
+	 * @throws {Error}
+	 * @throws {TypeError}
 	 */
-	_getContextVariable(match, matchValue) {
-		if (!Reflect.has(this.context, matchValue)) {
+	_checkBodyExpectation(body, { bodyType, properties }) {
+		const isType = is(body).toLowerCase();
+		bodyType = bodyType.toLowerCase();
+		assert.equal(isType, bodyType,
+			`Invalid type for the returned response body. Should be ${ok(bodyType)} but detected as ${error(isType)}`
+		);
+		console.log(`    bodyType = ${ok(bodyType)}`);
+
+		// Check properties keys if the returned type is an Object!
+		if (isType !== "Object" || is(properties) !== "Object") {
 			return;
 		}
-		return Reflect.get(this.context, matchValue);
+
+		console.log(
+			chalk.bold.cyan("    -> Body properties =")
+		);
+		for(const key of Object.keys(properties)) {
+			const propertyType = Reflect.get(properties, key).toLowerCase();
+			if (!has(body, key)) {
+				throw new Error(`Missing body response key ${key}`);
+			}
+			if (propertyType === "any") {
+				continue;
+			}
+			const bodyType = is(get(body, key)).toLowerCase();
+			if (bodyType !== propertyType) {
+				throw new TypeError(`Property ${info(key)} should be ${ok(propertyType)} but the returned property was ${warn(bodyType)}`);
+			}
+			console.log(`        Key: ${warn(key)} = ${ok(propertyType)}`);
+		}
+	}
+
+	/**
+	 * @private
+	 * @method _checkBodyExpectation
+	 * @desc Check returned body (it should match our expectation)
+	 * @memberof loopbackTest#
+	 * @param {!Object} headers Request headers Object
+	 * @param {!Object} expected Expected Object
+	 * @returns {void}
+	 *
+	 * @throws {Error}
+	 */
+	_checkHeadersExpectation(headers, expected) {
+		console.log(
+			chalk.cyan.bold("    -> Header properties :")
+		);
+
+		for(let headerKey of Object.keys(expected.headers)) {
+			headerKey = headerKey.toLowerCase();
+			if (!Reflect.has(headers, headerKey)) {
+				throw new Error(`Key ${ok(headerKey)} is not present in the response headers!`);
+			}
+			assert.equal(
+				headers[headerKey].includes(expected.headers[headerKey]),
+				true,
+				`Invalid headers value for the key ${info(headerKey)}. Should be (or contains) ${ok(expected.headers[headerKey])} but was ${error(headers[headerKey])}}`
+			);
+			console.log(`        Key: ${warn(headerKey)} = ${chalk.bold.green(expected.headers[headerKey])}`);
+		}
+	}
+
+	/**
+	 * @private
+	 * @method _checkAndAssignVariables
+	 * @desc Check and Assign body (keys/values) into the Context!
+	 * @memberof loopbackTest#
+	 * @param {!Object} body Request body object!
+	 * @param {!Object} variables Request variables Object
+	 * @returns {void}
+	 *
+	 * @throws {Error}
+	 */
+	_checkAndAssignVariables(body, variables) {
+		for(const varName of Object.keys(variables)) {
+			const varOptions = Reflect.get(variables, varName);
+			if(varOptions.required === true) {
+				throw new Error(`Variable ${ok(varName)} is missing from the response body. Cannot be applied to the test Context!`);
+			}
+			if (!has(body, varName)) {
+				continue;
+			}
+			const registerVar = is(varOptions.register) === "boolean" ? varOptions.register : true;
+			const varValue = get(body, varName);
+
+			if (registerVar) {
+				const finalVarName = varOptions.name || varName;
+				Reflect.set(this.context, finalVarName, varValue);
+				console.log(
+					`Assign new variable ${info(finalVarName)} with value ${warn(varValue)} into the context!`
+				);
+			}
+			if (!is.nullOrUndefined(varOptions.value) && varValue !== varOptions.value) {
+				throw new Error(`Variable ${ok(varName)} value should be ${info(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
+			}
+		}
+	}
+
+	/**
+	 * @private
+	 * @method _dump
+	 * @desc Dump object!
+	 * @memberof loopbackTest#
+	 * @param {!String} strTitle Dump title
+	 * @param {!Object} payload Dump payload
+	 * @returns {void}
+	 */
+	_dump(strTitle, payload) {
+		console.log(`--> ${strTitle} :`);
+		console.log(
+			chalk.gray.bold(JSON.stringify(payload, null, 2))
+		);
 	}
 
 	/**
@@ -80,7 +209,6 @@ class loopbackTest {
 	 */
 	async run() {
 		const baseUrl = this.app.get("url").replace(/\/$/, "");
-		const context = {};
 		let testIndex = 0;
 
 		for(const test of this.tests) {
@@ -88,6 +216,7 @@ class loopbackTest {
 			console.log("------------------------------------------------");
 			console.log(`\nRun test [${warn(testIndex)}] - ${warn(test.title) || ""}`);
 			testIndex++;
+
 			if (test.skip) {
 				console.log(info("Test skipped..."));
 				continue;
@@ -97,7 +226,13 @@ class loopbackTest {
 			if (is.nullOrUndefined(expect.statusCode)) {
 				Reflect.set(expect, "statusCode", 200);
 			}
-			test.url = test.url.replace(variableRegexp, this._getContextVariable.bind(this));
+			test.url = test.url.replace(variableRegexp, (match, matchValue) => {
+				console.log(arguments);
+				if (!Reflect.has(this.context, matchValue)) {
+					return;
+				}
+				test.url = test.url.replace(new RegExp(`\\${match}`, "g"), Reflect.get(this.context, matchValue));
+			});
 
 			// Hydrate context for headers keys!
 			if (is(test.headers) === 'Object') {
@@ -105,25 +240,25 @@ class loopbackTest {
 					if (is(test.headers[key]) !== "string") {
 						return;
 					}
-					test.headers[key].replace(variableRegexp, function match(match, matchValue) {
-						if (!Reflect.has(context, matchValue)) {
+					test.headers[key].replace(variableRegexp, (match, matchValue) => {
+						if (!Reflect.has(this.context, matchValue)) {
 							return;
 						}
-						test.headers[key] = test.headers[key].replace(new RegExp(`\\${match}`, "g"), Reflect.get(context, matchValue));
+						test.headers[key] = test.headers[key].replace(new RegExp(`\\${match}`, "g"), Reflect.get(this.context, matchValue));
 					});
 				});
 			}
 
-			const reqOptions = {
-				method: test.method || "GET",
+			// Define the HTTP Request!
+			let reqOptions = {
+				method: test.method,
 				url: `${baseUrl}/${this.basePath}${is(test.model) === "string" ? `/${test.model}` : ""}/${test.url}`,
 				formData: test.formData,
 				body: test.body,
 				headers: test.headers,
-				qs: test.qs,
-				resolveWithFullResponse: true,
-				json: true
+				qs: test.qs
 			};
+			reqOptions = Object.assign(cloneDeep(IDefaultRequest), reqOptions);
 
 			// Upload a file!
 			uploadFile: if (is(file) === "Object") {
@@ -145,26 +280,17 @@ class loopbackTest {
 			// Debug the request options !
 			if (debug) {
 				console.log(chalk.magenta.bold("[DEBUG ON]"));
-				console.log("--> Request options :");
-				console.log(
-					chalk.gray.bold(JSON.stringify(reqOptions, null, 2))
-				);
+				this._dump("Request options", reqOptions);
+				this._dump("Context", this.context);
 			}
 
 			// Make the request !
-			const resp = await request(reqOptions)
-			const { body, statusCode, headers } = resp;
+			const { body, statusCode, headers } = await request(reqOptions);
 
 			// Debug body and headers from response!
 			if (debug) {
-				console.log("--> Body :");
-				console.log(
-					chalk.gray.bold(JSON.stringify(body, null, 2))
-				);
-				console.log("\n--> Headers :");
-				console.log(
-					chalk.gray.bold(JSON.stringify(headers, null, 2))
-				);
+				this._dump("Body", body);
+				this._dump("Headers", headers);
 			}
 
 			// Check expected response statusCode
@@ -173,113 +299,26 @@ class loopbackTest {
 			);
 			console.log(`    statusCode = ${ok(expect.statusCode)}`);
 
-			/**
-			 * Check expected bodyType returned by the Request !
-			 */
+			// Check expected bodyType returned by the Request !
 			if (is(expect.bodyType) === "string") {
-				const isType 	= is(body).toLowerCase();
-				expect.bodyType = expect.bodyType.toLowerCase();
-
-				assert.equal(isType, expect.bodyType,
-					`Invalid type for the returned response body. Should be ${ok(expect.bodyType)} but detected as ${error(isType)}`
-				);
-				console.log(`    bodyType = ${ok(expect.bodyType)}`);
-
-				// Check properties keys if the returned type is an Object!
-				if (isType === "object" && is(expect.properties) === "Object") {
-					console.log(
-						chalk.bold.cyan("    -> Body properties =")
-					);
-					Object.keys(expect.properties).forEach((key) => {
-						const propertyType = Reflect.get(expect.properties, key).toLowerCase();
-						if (!has(body, key)) {
-							throw new Error(`Missing body response key ${key}`);
-						}
-						if (propertyType === "any") {
-							return;
-						}
-						const bodyType = is(get(body, key)).toLowerCase();
-						if (bodyType !== propertyType) {
-							throw new TypeError(
-								`Property ${info(key)} should be ${ok(propertyType)} but the returned property was ${warn(bodyType)}`
-							);
-						}
-						console.log(`        Key: ${warn(key)} = ${ok(propertyType)}`);
-					});
-				}
+				this._checkBodyExpectation(body, expect);
 			}
 
-			/**
-			 * Check expected headers!
-			 */
+			// Check expected headers!
 			if (is(expect.headers) === "Object") {
-				console.log(
-					chalk.cyan.bold("    -> Header properties :")
-				);
-				Object.keys(expect.headers).forEach(headerKey => {
-					headerKey = headerKey.toLowerCase();
-					if (
-						headers.hasOwnProperty(headerKey) === false
-					) {
-						throw new Error(
-							`Key ${ok(headerKey)} is not present in the response headers!`
-						);
-					}
-					assert.equal(
-						headers[headerKey].includes(
-							expect.headers[headerKey]
-						),
-						true,
-						`Invalid headers value for the key ${chalk.bold.blue(
-							headerKey
-						)}. Should be (or contains) ${chalk.bold.green(
-							expect.headers[headerKey]
-						)} but was ${chalk.bold.red(
-							headers[headerKey]
-						)}}`
-					);
-					console.log(
-						`        Key: ${warn(
-							headerKey
-						)} = ${chalk.bold.green(
-							expect.headers[headerKey]
-						)}`
-					);
-				});
+				this._checkHeadersExpectation(headers, expect);
 			}
 
-			/**
-			 * Check expected variables !
-			 */
+			// Check body(keys/values) and assign variables!
 			if (is(variables) === "Object") {
-				Object.keys(variables).forEach(varName => {
-					const varOptions = variables[varName];
-					if (has(body, varName)) {
-						const registerVar = is(varOptions.register) === "boolean" ? varOptions.register : true;
-						const varValue = get(body, varName);
-						if (registerVar) {
-							const finalVarName = varOptions.name || varName;
-							context[finalVarName] = varValue;
-							console.log(
-								`Assign new variable ${info(finalVarName)} with value ${warn(varValue)} into the context!`
-							);
-						}
-						if (!is.nullOrUndefined(varOptions.value)) {
-							if (varValue !== varOptions.value) {
-								throw new Error(`Variable ${ok(varName)} value should be ${info(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
-							}
-						}
-					}
-					else if(varOptions.required === true) {
-						throw new Error(`Variable ${ok(varName)} is missing from the response body. Cannot be applied to the test Context!`);
-					}
-				});
+				this._checkAndAssignVariables(body, variables);
 			}
 
 			console.timeEnd(test.title);
 		}
-		console.log(`\n\n${ok("All tests successfully passed!")}`);
 
+		console.log(`\n\n${ok("All tests successfully passed!")}`);
+		process.exit(0);
 	}
 
 	/**
@@ -303,15 +342,23 @@ class loopbackTest {
 	 * @public
 	 * @method run
 	 * @memberof loopbackTest#
-	 * @param {!Object} test Test payload to load on the application!
-	 * @returns {this} Return self
+	 * @param {!Array<Object>} testArr Test payload to load on the application!
+	 * @returns {loopbackTest} Return self
 	 */
-	load(test) {
-		if (is.nullOrUndefined(test)) {
+	load(testArr) {
+		if (is.nullOrUndefined(testArr)) {
 			throw new TypeError("test argument cant be undefined");
 		}
-		Object.assign(test, cloneDeep(this.headers));
-		this.tests.push(test);
+		const _tHead = cloneDeep(this.headers);
+		testArr.forEach((test) => {
+			if(Reflect.has(test, 'headers')) {
+				Object.assign(test.headers, _tHead);
+			}
+			else {
+				Reflect.set(test, 'headers', _tHead)
+			}
+			this.tests.push(test);
+		});
 		return this;
 	}
 
