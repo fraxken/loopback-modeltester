@@ -54,11 +54,11 @@ class loopbackTest extends events {
 		if (is.nullOrUndefined(app)) {
 			throw new TypeError("App argument cannot be undefined!");
 		}
-		this.app = app;
-		this.headers = {};
-		this.context = {};
-		this.tests = [];
-		this.basePath = basePath;
+		this.app 		= app;
+		this.headers 	= {};
+		this.context 	= {};
+		this.tests 		= [];
+		this.basePath 	= basePath;
 
 		this.app.on('started', async() => {
 			try {
@@ -162,24 +162,23 @@ class loopbackTest extends events {
 	_checkAndAssignVariables(body, variables) {
 		for(const varName of Object.keys(variables)) {
 			const varOptions = Reflect.get(variables, varName);
-			if(varOptions.required === true) {
-				throw new Error(`Variable ${ok(varName)} is missing from the response body. Cannot be applied to the test Context!`);
-			}
-			if (!has(body, varName)) {
-				continue;
-			}
-			const registerVar = is(varOptions.register) === "boolean" ? varOptions.register : true;
-			const varValue = get(body, varName);
+			if (has(body, varName)) {
+				const registerVar = is(varOptions.register) === "boolean" ? varOptions.register : true;
+				const varValue = get(body, varName);
 
-			if (registerVar) {
-				const finalVarName = varOptions.name || varName;
-				Reflect.set(this.context, finalVarName, varValue);
-				console.log(
-					`Assign new variable ${info(finalVarName)} with value ${warn(varValue)} into the context!`
-				);
+				if (registerVar) {
+					const finalVarName = varOptions.name || varName;
+					this.context[finalVarName] = varValue;
+					console.log(
+						`Assign new variable ${info(finalVarName)} with value ${warn(varValue)} into the context!`
+					);
+				}
+				if (!is.nullOrUndefined(varOptions.value) && varValue !== varOptions.value) {
+					throw new Error(`Variable ${ok(varName)} value should be ${info(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
+				}
 			}
-			if (!is.nullOrUndefined(varOptions.value) && varValue !== varOptions.value) {
-				throw new Error(`Variable ${ok(varName)} value should be ${info(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
+			else if(varOptions.required === true) {
+				throw new Error(`Variable ${ok(varName)} is missing from the response body. Cannot be applied to the test Context!`);
 			}
 		}
 	}
@@ -198,6 +197,26 @@ class loopbackTest extends events {
 		console.log(
 			chalk.gray.bold(JSON.stringify(payload, null, 2))
 		);
+	}
+
+	/**
+	 * @private
+	 * @method _getContextVariable
+	 * @desc Get variable in Regexp (shorthand private method)
+	 * @param {!String} varStr variable to handle!
+	 * @returns {void|String} Context variable!
+	 */
+	_getContextVariable(varStr) {
+		varStr.replace(variableRegexp, (match, matchValue) => {
+			if (!Reflect.has(this.context, matchValue)) {
+				return;
+			}
+			varStr = varStr.replace(
+				new RegExp(`\\${match}`, "g"),
+				Reflect.get(this.context, matchValue)
+			);
+		});
+		return varStr;
 	}
 
 	/**
@@ -226,27 +245,17 @@ class loopbackTest extends events {
 			if (is.nullOrUndefined(expect.statusCode)) {
 				Reflect.set(expect, "statusCode", 200);
 			}
-			test.url = test.url.replace(variableRegexp, (match, matchValue) => {
-				console.log(arguments);
-				if (!Reflect.has(this.context, matchValue)) {
-					return;
-				}
-				test.url = test.url.replace(new RegExp(`\\${match}`, "g"), Reflect.get(this.context, matchValue));
-			});
+			test.url = this._getContextVariable(this.url);
 
 			// Hydrate context for headers keys!
 			if (is(test.headers) === 'Object') {
-				Object.keys(test.headers).forEach(key => {
-					if (is(test.headers[key]) !== "string") {
-						return;
+				for(const key of Object.keys(test.headers)) {
+					const value = Reflect.get(test.headers, key);
+					if (is(value) !== "string") {
+						continue;
 					}
-					test.headers[key].replace(variableRegexp, (match, matchValue) => {
-						if (!Reflect.has(this.context, matchValue)) {
-							return;
-						}
-						test.headers[key] = test.headers[key].replace(new RegExp(`\\${match}`, "g"), Reflect.get(this.context, matchValue));
-					});
-				});
+					Reflect.set(test.headers, key, this._getContextVariable(value));
+				}
 			}
 
 			// Define the HTTP Request!
