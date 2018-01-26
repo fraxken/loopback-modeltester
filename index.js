@@ -1,14 +1,15 @@
 "use strict";
 
 // Require Node.JS package
-const assert = require("assert");
 const { createReadStream } = require("fs");
 const { basename } = require("path");
+const { performance } = require('perf_hooks');
+const assert = require("assert");
 const events = require('events');
 
 // Require npm Packages
-const request = require("request-promise");
 const { has, get, cloneDeep } = require("lodash");
+const request = require("request-promise");
 const is = require("@sindresorhus/is");
 const mime = require("mime-types");
 const chalk = require("chalk");
@@ -16,9 +17,12 @@ const chalk = require("chalk");
 // Assign Chalk color shortHand!
 const {
 	yellow: warn,
+	greenBright: fOk,
 	green: ok,
-	blue: info,
-	red: error
+	blueBright: info,
+	red: error,
+	gray,
+	white
 } = chalk.bold;
 
 // Variable REGEXP
@@ -65,7 +69,7 @@ class loopbackTest extends events {
 				await this.run();
 			}
 			catch(E) {
-				this.emit('error', E.message);
+				this.emit('error', E);
 				process.exit(0);
 			}
 		});
@@ -92,30 +96,55 @@ class loopbackTest extends events {
 		assert.equal(isType, bodyType,
 			`Invalid type for the returned response body. Should be ${ok(bodyType)} but detected as ${error(isType)}`
 		);
-		console.log(`    bodyType = ${ok(bodyType)}`);
+		console.log(`├── ${white("bodyType")}: ${ok(bodyType)}`);
+		console.log("│");
 
 		// Check properties keys if the returned type is an Object!
 		if (isType !== "Object" || is(properties) !== "Object") {
 			return;
 		}
 
-		console.log(
-			chalk.bold.cyan("    -> Body properties =")
-		);
+		console.log(`├── [ ${warn("Body properties")} ]`);
 		for(const key of Object.keys(properties)) {
-			const propertyType = Reflect.get(properties, key).toLowerCase();
 			if (!has(body, key)) {
 				throw new Error(`Missing body response key ${key}`);
 			}
-			if (propertyType === "any") {
-				continue;
+			const propertyType= Reflect.get(properties, key);
+			const propertyIs = is(propertyValue);
+			const bodyValue = get(body, key);
+			const bodyType = is(bodyValue).toLowerCase();
+
+			if(propertyIs === "string") {
+				propertyType = propertyType.toLowerCase();
+				if (propertyType === "any") {
+					continue;
+				}
+				if (bodyType !== propertyValue) {
+					throw new TypeError(`Property ${info(key)} should be ${ok(propertyType)} but the returned property was ${warn(bodyType)}`);
+				}
+				console.log(`│     ├── ${white(key)}: ${ok(propertyType)}`);
 			}
-			const bodyType = is(get(body, key)).toLowerCase();
-			if (bodyType !== propertyType) {
-				throw new TypeError(`Property ${info(key)} should be ${ok(propertyType)} but the returned property was ${warn(bodyType)}`);
-			}
-			console.log(`        Key: ${warn(key)} = ${ok(propertyType)}`);
+			else if(propertyIs === "Object") {
+				let { type, value } = propertyType;
+				type = type.toLowerCase();
+				if (type === "any") {
+					continue;
+				}
+				if (bodyType !== type) {
+					throw new TypeError(`Property ${info(key)} should be ${ok(type)} but the returned property was ${warn(bodyType)}`);
+				}
+				if(!is.nullOrUndefined(value) && bodyValue !== value) {
+					if(is(value) === "string") {
+						value = this._getContextVariable(value);
+					}
+					throw new Error(
+						`Variable ${info(key)} value should be ${ok(value)} but was detected as ${error(bodyValue)}`
+					);
+				}
+				console.log(`│     ├── ${white(key)}: ${ok(propertyType)}`);
+ 			}
 		}
+		console.log("│");
 	}
 
 	/**
@@ -130,10 +159,7 @@ class loopbackTest extends events {
 	 * @throws {Error}
 	 */
 	_checkHeadersExpectation(headers, expected) {
-		console.log(
-			chalk.cyan.bold("    -> Header properties :")
-		);
-
+		console.log(`├── [ ${warn("Headers properties")} ]`);
 		for(let headerKey of Object.keys(expected.headers)) {
 			headerKey = headerKey.toLowerCase();
 			if (!Reflect.has(headers, headerKey)) {
@@ -144,8 +170,9 @@ class loopbackTest extends events {
 				true,
 				`Invalid headers value for the key ${info(headerKey)}. Should be (or contains) ${ok(expected.headers[headerKey])} but was ${error(headers[headerKey])}}`
 			);
-			console.log(`        Key: ${warn(headerKey)} = ${chalk.bold.green(expected.headers[headerKey])}`);
+			console.log(`│     ├── ${white(headerKey)}: ${ok(expected.headers[headerKey])}`);
 		}
+		console.log("│");
 	}
 
 	/**
@@ -154,33 +181,25 @@ class loopbackTest extends events {
 	 * @desc Check and Assign body (keys/values) into the Context!
 	 * @memberof loopbackTest#
 	 * @param {!Object} body Request body object!
-	 * @param {!Object} variables Request variables Object
+	 * @param {String[]} variables Request variables Object
 	 * @returns {void}
 	 *
 	 * @throws {Error}
 	 */
 	_checkAndAssignVariables(body, variables) {
-		for(const varName of Object.keys(variables)) {
-			const varOptions = Reflect.get(variables, varName);
-			if (has(body, varName)) {
-				const registerVar = is(varOptions.register) === "boolean" ? varOptions.register : true;
-				const varValue = get(body, varName);
-
-				if (registerVar) {
-					const finalVarName = varOptions.name || varName;
-					this.context[finalVarName] = varValue;
-					console.log(
-						`Assign new variable ${info(finalVarName)} with value ${warn(varValue)} into the context!`
-					);
-				}
-				if (!is.nullOrUndefined(varOptions.value) && varValue !== varOptions.value) {
-					throw new Error(`Variable ${ok(varName)} value should be ${info(varOptions.value)} but was detected as ${chalk.red.bold(varValue)}`);
-				}
-			}
-			else if(varOptions.required === true) {
+		for(const completeVarStr of variables) {
+			const [varName, varFix] = completeVarStr.split(':');
+			if(!has(body, varName)) {
 				throw new Error(`Variable ${ok(varName)} is missing from the response body. Cannot be applied to the test Context!`);
 			}
+			const varValue = get(body, varName);
+			const finalVarName = varFix || varName;
+			this.context[finalVarName] = varValue;
+			console.log(
+				`├── Assign new variable ${ok(finalVarName)} with value ${chalk.bold.cyan(varValue)} into the context!`
+			);
 		}
+		console.log("│");
 	}
 
 	/**
@@ -193,10 +212,8 @@ class loopbackTest extends events {
 	 * @returns {void}
 	 */
 	_dump(strTitle, payload) {
-		console.log(`--> ${strTitle} :`);
-		console.log(
-			chalk.gray.bold(JSON.stringify(payload, null, 2))
-		);
+		console.log(`├── ${white(strTitle)}:`);
+		console.log(`\n${gray(JSON.stringify(payload, null, 2))}\n`);
 	}
 
 	/**
@@ -205,8 +222,13 @@ class loopbackTest extends events {
 	 * @desc Get variable in Regexp (shorthand private method)
 	 * @param {!String} varStr variable to handle!
 	 * @returns {void|String} Context variable!
+	 * 
+	 * @throws {TypeError}
 	 */
 	_getContextVariable(varStr) {
+		if(is.nullOrUndefined(varStr)) {
+			throw new TypeError("varStr argument cannot be undefined or null!");
+		}
 		varStr.replace(variableRegexp, (match, matchValue) => {
 			if (!Reflect.has(this.context, matchValue)) {
 				return;
@@ -231,13 +253,14 @@ class loopbackTest extends events {
 		let testIndex = 0;
 
 		for(const test of this.tests) {
-			console.time(test.title);
-			console.log("------------------------------------------------");
-			console.log(`\nRun test [${warn(testIndex)}] - ${warn(test.title) || ""}`);
 			testIndex++;
+			performance.mark(`start_${testIndex}`);
+			console.log(`\n\n${white("Running test: id")} ${ok(testIndex)} - ${fOk(test.title) || "[NO TITLE]"}`);
+			console.log(gray("─────────────────────────────────────────────────────"));
+			
 
 			if (test.skip) {
-				console.log(info("Test skipped..."));
+				console.log(`├── ${warn("Test skipped...")}`);
 				continue;
 			}
 
@@ -245,7 +268,7 @@ class loopbackTest extends events {
 			if (is.nullOrUndefined(expect.statusCode)) {
 				Reflect.set(expect, "statusCode", 200);
 			}
-			test.url = this._getContextVariable(this.url);
+			test.url = this._getContextVariable(test.url);
 
 			// Hydrate context for headers keys!
 			if (is(test.headers) === 'Object') {
@@ -276,25 +299,31 @@ class loopbackTest extends events {
 				}
 				const formName = is.nullOrUndefined(file.form_name) ? "file" : file.form_name;
 				const name = basename(file.path);
-				reqOptions.formData = { name };
-				reqOptions.formData[formName] = {
-					value: createReadStream(file.path),
-					options: {
-						filename: name,
-						contentType: mime.lookup(name)
+				reqOptions.formData = { 
+					name,
+					[formName]: {
+						value: createReadStream(file.path),
+						options: {
+							filename: name,
+							contentType: mime.lookup(name)
+						}
 					}
 				};
 			}
 
 			// Debug the request options !
 			if (debug) {
-				console.log(chalk.magenta.bold("[DEBUG ON]"));
+				console.log(`├── [ ${chalk.magenta.bold("DEBUG ON")} ]`)
 				this._dump("Request options", reqOptions);
 				this._dump("Context", this.context);
+			}
+			else {
+				console.log(`├── ${white("url")}: [${warn(reqOptions.method)}] ${ok(reqOptions.url)}`);
 			}
 
 			// Make the request !
 			const { body, statusCode, headers } = await request(reqOptions);
+			reqOptions = undefined;
 
 			// Debug body and headers from response!
 			if (debug) {
@@ -306,7 +335,7 @@ class loopbackTest extends events {
 			assert.equal(statusCode, expect.statusCode,
 				`Invalid response statusCode. Should be ${ok(expect)} but returned code ${error(statusCode)}`
 			);
-			console.log(`    statusCode = ${ok(expect.statusCode)}`);
+			console.log(`├── ${white("statusCode")}: ${ok(expect.statusCode)}`);
 
 			// Check expected bodyType returned by the Request !
 			if (is(expect.bodyType) === "string") {
@@ -319,11 +348,14 @@ class loopbackTest extends events {
 			}
 
 			// Check body(keys/values) and assign variables!
-			if (is(variables) === "Object") {
+			if (is(variables) === "Array") {
 				this._checkAndAssignVariables(body, variables);
 			}
 
-			console.timeEnd(test.title);
+			performance.mark(`end_${testIndex}`);
+			performance.measure(`execDuration_${testIndex}`, `start_${testIndex}`, `end_${testIndex}`);
+			const [measure] = performance.getEntriesByName(`execDuration_${testIndex}`);
+			console.log(`├── ${white("Execution time (ms)")}: ${warn(`${measure.duration}ms`)}`);
 		}
 
 		console.log(`\n\n${ok("All tests successfully passed!")}`);
