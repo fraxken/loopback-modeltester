@@ -35,6 +35,23 @@ const IDefaultRequest = {
 };
 
 /**
+ * @function getSourceDB
+ * @memberof helpers
+ * @param {CollectionManager} model Loopback model
+ * @returns {MongoDB.DB} Return MongoDB Connector
+ */
+function getSourceDB(model) {
+	return new Promise((resolve, reject) => {
+		model.getDataSource().connector.connect(function connectDB(err, db) {
+			if (err) {
+				return reject(err);
+			}
+			resolve(db);
+		});
+	});
+}
+
+/**
  * @class loopbackTest
  * @classdesc Run unit tests
  *
@@ -50,14 +67,16 @@ class loopbackTest extends events {
 	 * @constructor
 	 * @param {*} app Loopback server application
 	 * @param {String} basePath API BasePath
+	 * @param {String=} baseModelName
 	 *
 	 * @throws {TypeError}
 	 */
-	constructor(app, basePath = "api") {
+	constructor(app, basePath = "api", baseModelName) {
 		super();
 		if (is.nullOrUndefined(app)) {
 			throw new TypeError("App argument cannot be undefined!");
 		}
+
 		this.app 		= app;
 		this.headers 	= {};
 		this.context 	= {};
@@ -65,17 +84,64 @@ class loopbackTest extends events {
 		this.basePath 	= basePath;
 
 		this.app.on('started', async() => {
+			let DB;
+			if(is(baseModelName) === "string") {
+				DB = await getSourceDB(this.app.models[baseModelName]);
+				if(!is.nullOrUndefined(this.before)) {
+					try {
+						await this.before(DB);
+					}
+					catch(E) {
+						this.emit('error', E.message);
+					}
+				}
+			}
 			try {
 				await this.run();
 			}
 			catch(E) {
+				if(Reflect.has(E, 'response')) {
+					delete E.response;
+				}
 				this.emit('error', E);
-				process.exit(0);
 			}
+			if(!is.nullOrUndefined(this.after)) {
+				try {
+					await this.after(DB);
+				}
+				catch(E) {
+					this.emit('error', E.message);
+				}
+			}
+			process.exit(0);
 		});
 		process.nextTick(() => {
 			this.app.start();
 		});
+	}
+
+	/**
+	 * @memberof loopbackTest
+	 * @public
+	 * @param {Function} before function
+	 */
+	set before(fn) {
+		if(is.asyncFunction(fn)) {
+			throw new TypeError("before property should be an AsyncFunction");
+		}
+		this.before = fn;
+	}
+
+	/**
+	 * @memberof loopbackTest
+	 * @public
+	 * @param {Function} after function
+	 */
+	set before(fn) {
+		if(is.asyncFunction(fn)) {
+			throw new TypeError("after property should be an AsyncFunction");
+		}
+		this.after = fn;
 	}
 
 	/**
@@ -359,7 +425,6 @@ class loopbackTest extends events {
 		}
 
 		console.log(`\n\n${ok("All tests successfully passed!")}`);
-		process.exit(0);
 	}
 
 	/**
