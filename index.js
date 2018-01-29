@@ -87,9 +87,9 @@ class loopbackTest extends events {
 			let DB;
 			if(is(baseModelName) === "string") {
 				DB = await getSourceDB(this.app.models[baseModelName]);
-				if(!is.nullOrUndefined(this.before)) {
+				if(!is.nullOrUndefined(this._before)) {
 					try {
-						await this.before(DB);
+						await this._before(DB);
 					}
 					catch(E) {
 						this.emit('error', E.message);
@@ -105,9 +105,9 @@ class loopbackTest extends events {
 				}
 				this.emit('error', E);
 			}
-			if(!is.nullOrUndefined(this.after)) {
+			if(!is.nullOrUndefined(this._after)) {
 				try {
-					await this.after(DB);
+					await this._after(DB);
 				}
 				catch(E) {
 					this.emit('error', E.message);
@@ -151,7 +151,7 @@ class loopbackTest extends events {
 		if(!is.asyncFunction(fn)) {
 			throw new TypeError("before property should be an AsyncFunction");
 		}
-		this.before = fn;
+		this._before = fn;
 	}
 
 	/**
@@ -163,7 +163,7 @@ class loopbackTest extends events {
 		if(!is.asyncFunction(fn)) {
 			throw new TypeError("after property should be an AsyncFunction");
 		}
-		this.after = fn;
+		this._after = fn;
 	}
 
 	/**
