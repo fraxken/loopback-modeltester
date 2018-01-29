@@ -8,7 +8,7 @@ const assert = require("assert");
 const events = require('events');
 
 // Require npm Packages
-const { has, get, cloneDeep } = require("lodash");
+const { has, get, cloneDeep, merge } = require("lodash");
 const request = require("request-promise");
 const is = require("@sindresorhus/is");
 const mime = require("mime-types");
@@ -78,7 +78,7 @@ class loopbackTest extends events {
 		}
 
 		this.app 		= app;
-		this.defaultPayload = {};
+		this.payload    = {};
 		this.context 	= {};
 		this.tests 		= [];
 		this.basePath 	= basePath;
@@ -412,7 +412,10 @@ class loopbackTest extends events {
 			// Make the request !
 			let body, statusCode, headers;
 			try {
-				({ body, statusCode, headers }) = await request(reqOptions);
+				const response = await request(reqOptions);
+				body = response.body;
+				statusCode = response.statusCode;
+				headers = response.headers;
 				if (debug) {
 					this._dump("Body", body);
 					this._dump("Headers", headers);
@@ -423,6 +426,7 @@ class loopbackTest extends events {
 				this._dump("Context", this.context);
 				this._dump("Body", body);
 				this._dump("Headers", headers);
+				throw E;
 			}
 
 			// Check expected response statusCode
@@ -461,7 +465,7 @@ class loopbackTest extends events {
 	 * @desc Add default payload for each tests!
 	 * @memberof loopbackTest#
 	 * @param {!Object} payload payload
-	 * @returns {void}
+	 * @returns {this}
 	 *
 	 * @throws {TypeError}
 	 */
@@ -469,7 +473,9 @@ class loopbackTest extends events {
 		if (is(payload) !== 'Object') {
 			throw new TypeError("payload argument have to be typeof Object");
 		}
-		Object.assign(this.defaultPayload, cloneDeep(payload));
+
+		Object.assign(this.payload, cloneDeep(payload));
+		return this;
 	}
 
 	/**
@@ -483,10 +489,9 @@ class loopbackTest extends events {
 		if (is.nullOrUndefined(testArr)) {
 			throw new TypeError("test argument cant be undefined");
 		}
-		const _p = cloneDeep(this.defaultPayload);
+		const _p = cloneDeep(this.payload);
 		testArr.forEach((test) => {
-			Object.assign(test, _p);
-			this.tests.push(test);
+			this.tests.push(merge(test, _p));
 		});
 		return this;
 	}
