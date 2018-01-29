@@ -148,7 +148,7 @@ class loopbackTest extends events {
 	 * @param {Function} before function
 	 */
 	set before(fn) {
-		if(is.asyncFunction(fn)) {
+		if(!is.asyncFunction(fn)) {
 			throw new TypeError("before property should be an AsyncFunction");
 		}
 		this.before = fn;
@@ -160,7 +160,7 @@ class loopbackTest extends events {
 	 * @param {Function} after function
 	 */
 	set after(fn) {
-		if(is.asyncFunction(fn)) {
+		if(!is.asyncFunction(fn)) {
 			throw new TypeError("after property should be an AsyncFunction");
 		}
 		this.after = fn;
