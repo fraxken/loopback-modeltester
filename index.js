@@ -78,7 +78,7 @@ class loopbackTest extends events {
 		}
 
 		this.app 		= app;
-		this.headers 	= {};
+		this.defaultPayload = {};
 		this.context 	= {};
 		this.tests 		= [];
 		this.basePath 	= basePath;
@@ -121,6 +121,28 @@ class loopbackTest extends events {
 	}
 
 	/**
+	 * @public
+	 * @method setVar
+	 * @desc Add a new variable into the context
+	 * @memberof loopbackTest#
+	 * @param {!String} varName Variable name
+	 * @param {!any} varValue Variable value
+	 * @returns {this}
+	 *
+	 * @throws {TypeError}
+	 */
+	setVar(varName, varValue) {
+		if(is(varName) !== 'string') {
+			throw new TypeError('varName argument should be a string!')
+		}
+		if(is.nullOrUndefined(varValue)) {
+			throw new TypeError('varValue argument cannot be undefined');
+		}
+		Reflect.set(this.context, varName, varValue);
+		return this;
+	}
+
+	/**
 	 * @memberof loopbackTest
 	 * @public
 	 * @param {Function} before function
@@ -137,7 +159,7 @@ class loopbackTest extends events {
 	 * @public
 	 * @param {Function} after function
 	 */
-	set before(fn) {
+	set after(fn) {
 		if(is.asyncFunction(fn)) {
 			throw new TypeError("after property should be an AsyncFunction");
 		}
@@ -388,11 +410,17 @@ class loopbackTest extends events {
 			}
 
 			// Make the request !
-			const { body, statusCode, headers } = await request(reqOptions);
-			reqOptions = undefined;
-
-			// Debug body and headers from response!
-			if (debug) {
+			let body, statusCode, headers;
+			try {
+				({ body, statusCode, headers }) = await request(reqOptions);
+				if (debug) {
+					this._dump("Body", body);
+					this._dump("Headers", headers);
+				}
+			}
+			catch(E) {
+				this._dump("Request options", reqOptions);
+				this._dump("Context", this.context);
 				this._dump("Body", body);
 				this._dump("Headers", headers);
 			}
@@ -429,19 +457,19 @@ class loopbackTest extends events {
 
 	/**
 	 * @public
-	 * @method defaultHeaders
-	 * @desc Add default header for each tests!
+	 * @method defaultPayload
+	 * @desc Add default payload for each tests!
 	 * @memberof loopbackTest#
-	 * @param {!Object} headers headers Object!
+	 * @param {!Object} payload payload
 	 * @returns {void}
 	 *
 	 * @throws {TypeError}
 	 */
-	defaultHeaders(headers) {
-		if (is(headers) !== 'Object') {
-			throw new TypeError("headers argument have to be typeof Object");
+	defaultPayload(payload) {
+		if (is(payload) !== 'Object') {
+			throw new TypeError("payload argument have to be typeof Object");
 		}
-		Object.assign(this.headers, cloneDeep(headers));
+		Object.assign(this.defaultPayload, cloneDeep(payload));
 	}
 
 	/**
@@ -455,14 +483,9 @@ class loopbackTest extends events {
 		if (is.nullOrUndefined(testArr)) {
 			throw new TypeError("test argument cant be undefined");
 		}
-		const _tHead = cloneDeep(this.headers);
+		const _p = cloneDeep(this.defaultPayload);
 		testArr.forEach((test) => {
-			if(Reflect.has(test, 'headers')) {
-				Object.assign(test.headers, _tHead);
-			}
-			else {
-				Reflect.set(test, 'headers', _tHead)
-			}
+			Object.assign(test, _p);
 			this.tests.push(test);
 		});
 		return this;
