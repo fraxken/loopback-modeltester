@@ -343,7 +343,6 @@ class loopbackTest extends events {
 		for(const test of this.tests) {
 			testIndex++;
 			performance.mark(`start_${testIndex}`);
-			console.log(test);
 			console.log(`\n\n${white("Running test: id")} ${ok(testIndex)} - ${fOk(test.title) || "[NO TITLE]"}`);
 			console.log(gray("─────────────────────────────────────────────────────"));
 			
