@@ -8,7 +8,7 @@ const assert = require("assert");
 const events = require('events');
 
 // Require npm Packages
-const { has, get, cloneDeep, merge } = require("lodash");
+const { has, get, cloneDeep, merge, defaults } = require("lodash");
 const request = require("request-promise");
 const is = require("@sindresorhus/is");
 const mime = require("mime-types");
@@ -343,6 +343,7 @@ class loopbackTest extends events {
 		for(const test of this.tests) {
 			testIndex++;
 			performance.mark(`start_${testIndex}`);
+			console.log(test);
 			console.log(`\n\n${white("Running test: id")} ${ok(testIndex)} - ${fOk(test.title) || "[NO TITLE]"}`);
 			console.log(gray("─────────────────────────────────────────────────────"));
 			
@@ -489,9 +490,8 @@ class loopbackTest extends events {
 		if (is.nullOrUndefined(testArr)) {
 			throw new TypeError("test argument cant be undefined");
 		}
-		const _p = cloneDeep(this.payload);
 		testArr.forEach((test) => {
-			this.tests.push(merge(test, _p));
+			this.tests.push(merge(cloneDeep(this.payload), test));
 		});
 		return this;
 	}
