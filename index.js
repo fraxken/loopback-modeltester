@@ -8,7 +8,7 @@ const assert = require("assert");
 const events = require('events');
 
 // Require npm Packages
-const { has, get, cloneDeep, merge, defaults } = require("lodash");
+const { has, get, cloneDeep, merge, isEqual } = require("lodash");
 const request = require("request-promise");
 const is = require("@sindresorhus/is");
 const mime = require("mime-types");
@@ -188,26 +188,26 @@ class loopbackTest extends events {
 		console.log("│");
 
 		// Check properties keys if the returned type is an Object!
-		if (isType !== "Object" || is(properties) !== "Object") {
+		if (isType !== "object" || is(properties) !== "Object") {
 			return;
 		}
 
 		console.log(`├── [ ${warn("Body properties")} ]`);
 		for(const key of Object.keys(properties)) {
 			if (!has(body, key)) {
-				throw new Error(`Missing body response key ${key}`);
+				throw new Error(`Missing property key ${key} in the response body`);
 			}
-			const propertyType= Reflect.get(properties, key);
-			const propertyIs = is(propertyValue);
-			const bodyValue = get(body, key);
-			const bodyType = is(bodyValue).toLowerCase();
+			let propertyType 	= Reflect.get(properties, key);
+			const propertyIs 	= is(propertyType);
+			const bodyValue 	= get(body, key);
+			const bodyType 		= is(bodyValue).toLowerCase();
 
 			if(propertyIs === "string") {
 				propertyType = propertyType.toLowerCase();
 				if (propertyType === "any") {
 					continue;
 				}
-				if (bodyType !== propertyValue) {
+				if (bodyType !== propertyType) {
 					throw new TypeError(`Property ${info(key)} should be ${ok(propertyType)} but the returned property was ${warn(bodyType)}`);
 				}
 				console.log(`│     ├── ${white(key)}: ${ok(propertyType)}`);
@@ -219,17 +219,15 @@ class loopbackTest extends events {
 					continue;
 				}
 				if (bodyType !== type) {
-					throw new TypeError(`Property ${info(key)} should be ${ok(type)} but the returned property was ${warn(bodyType)}`);
+					throw new TypeError(`Property ${info(key)} should be typeof ${ok(type)} but the returned property was typeof ${warn(bodyType)}`);
 				}
-				if(!is.nullOrUndefined(value) && bodyValue !== value) {
-					if(is(value) === "string") {
-						value = this._getContextVariable(value);
-					}
-					throw new Error(
-						`Variable ${info(key)} value should be ${ok(value)} but was detected as ${error(bodyValue)}`
-					);
+				if(is(value) === "string") {
+					value = this._getContextVariable(value);
 				}
-				console.log(`│     ├── ${white(key)}: ${ok(propertyType)}`);
+				if(!is.nullOrUndefined(value) && !isEqual(bodyValue, value)) {
+					throw new Error(`Variable ${info(key)} value should be ${ok(value)} but was detected as ${error(bodyValue)}`);
+				}
+				console.log(`│     ├── ${white(key)}: ${ok(type)}`);
  			}
 		}
 		console.log("│");
