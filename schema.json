@@ -1,0 +1,88 @@
+{
+	"type": "array",
+	"items": {
+		"type": "object",
+		"properties": {
+			"title": {
+				"type": "string",
+				"description": "Test title",
+				"minLength": 10,
+				"maxLength": 80
+			},
+			"method": {
+				"type": "string",
+				"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+				"description": "Request HTTP Verbose Method"
+			},
+			"model": {
+				"type": "string",
+				"description": "Loopback Model name (plural form)"
+			},
+			"url": {
+				"type": "string",
+				"description": "Loopback method Name and/or arguments... to call in the model"
+			},
+			"skip": {
+				"type": "boolean",
+				"description": "Skip the test"
+			},
+			"debug": {
+				"type": "boolean",
+				"description": "Debug by dumping the request payload, the response body and the current context!"
+			},
+			"file": {
+				"type": "object",
+				"description": "Allow to upload a given file!",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "File location to be uploded!"
+					},
+					"form_name": {
+						"type": "string",
+						"maxLength": 40,
+						"description": "Form name to be sent into the request"
+					}
+				},
+				"required": ["path"],
+				"additionalProperties": false
+			},
+			"headers": {
+				"description": "Request headers...",
+				"type": "object"
+			},
+			"expect": {
+				"type": "object",
+				"description": "Describe how do you expect the response to be!",
+				"properties": {
+					"statusCode": {
+						"description": "Expected response statusCode",
+						"type": "number"
+					},
+					"bodyType": {
+						"description": "Expected response body Type (JavaScript)",
+						"type": "string"
+					},
+					"headers": {
+						"description": "All headers key expected, with the value not matched explicitely",
+						"type": "object"
+					},
+					"properties": {
+						"description": "All body properties expected",
+						"type": "object"
+					}
+				},
+				"additionalProperties": false
+			},
+			"variables": {
+				"type": "array",
+				"description": "Response body to declare as a variable in the Test context!",
+				"items": {
+					"type": "string"
+				}
+			}
+		},
+		"additionalProperties": false,
+		"required": ["title", "url"]
+	}
+}
