@@ -404,7 +404,7 @@ class loopbackTest extends events {
 				this._dump("Context", this.context);
 			}
 			else {
-				console.log(`├── ${white("url")}: [${warn(reqOptions.method)}] ${ok(reqOptions.url)}`);
+				console.log(`├── ${white("url")}: [${warn(reqOptions.method || 'GET')}] ${ok(reqOptions.url)}`);
 			}
 
 			// Make the request !
