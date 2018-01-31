@@ -9,6 +9,13 @@
 				"minLength": 10,
 				"maxLength": 80
 			},
+			"extends": {
+				"type": "array",
+				"description": "Extension models!",
+				"items": {
+					"type": "string"
+				}
+			},
 			"method": {
 				"type": "string",
 				"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],

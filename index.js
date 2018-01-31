@@ -512,17 +512,12 @@ class loopbackTest extends events {
 		}
 		testArr.forEach((test) => {
 			if(Reflect.has(test, 'extends')) {
-				const ext = Reflect.get(test, 'extends');
-				if(is(ext) === 'Array') {
-					for(const sExt of ext) {
-						if(this.extension.has(sExt)) {
-							merge(cloneDeep(this.extension.get(sExt)), test);
+				const extendArray = Reflect.get(test, 'extends');
+				if(is(extendArray) === 'Array') {
+					for(const ext of extendArray) {
+						if(this.extension.has(ext)) {
+							test = merge(cloneDeep(this.extension.get(ext)), test);
 						}
-					}
-				}
-				else if(is(ext) === 'string') {
-					if(this.extension.has(ext)) {
-						merge(cloneDeep(this.extension.get(ext)), test);
 					}
 				}
 				Reflect.deleteProperty(test, 'extends');
