@@ -67,7 +67,7 @@ class loopbackTest extends events {
 	 * @constructor
 	 * @param {*} app Loopback server application
 	 * @param {String} basePath API BasePath
-	 * @param {String=} baseModelName
+	 * @param {String=} baseModelName baseModelName
 	 *
 	 * @throws {TypeError}
 	 */
@@ -82,6 +82,7 @@ class loopbackTest extends events {
 		this.context 	= {};
 		this.tests 		= [];
 		this.basePath 	= basePath;
+		this.extension  = new Map();
 
 		this.app.on('started', async() => {
 			let DB;
@@ -127,7 +128,7 @@ class loopbackTest extends events {
 	 * @memberof loopbackTest#
 	 * @param {!String} varName Variable name
 	 * @param {!any} varValue Variable value
-	 * @returns {this}
+	 * @returns {this} return this
 	 *
 	 * @throws {TypeError}
 	 */
@@ -463,7 +464,7 @@ class loopbackTest extends events {
 	 * @desc Add default payload for each tests!
 	 * @memberof loopbackTest#
 	 * @param {!Object} payload payload
-	 * @returns {this}
+	 * @returns {this} return this
 	 *
 	 * @throws {TypeError}
 	 */
@@ -473,6 +474,28 @@ class loopbackTest extends events {
 		}
 
 		Object.assign(this.payload, cloneDeep(payload));
+		return this;
+	}
+
+	/**
+	 * @public
+	 * @method extend
+	 * @desc Add a new code extension
+	 * @memberof loopbackTest#
+	 * @param {!String} name extension name
+	 * @param {!Object} payload payload
+	 * @returns {this} return this
+	 *
+	 * @throws {TypeError}
+	 */
+	extend(name, payload) {
+		if (is(name) !== 'string') {
+			throw new TypeError('name argument should be a string');
+		}
+		if (is(payload) !== 'Object') {
+			throw new TypeError("payload argument have to be typeof Object");
+		}
+		this.extension.set(name, cloneDeep(payload));
 		return this;
 	}
 
@@ -488,6 +511,22 @@ class loopbackTest extends events {
 			throw new TypeError("test argument cant be undefined");
 		}
 		testArr.forEach((test) => {
+			if(Reflect.has(test, 'extends')) {
+				const ext = Reflect.get(test, 'extends');
+				if(is(ext) === 'Array') {
+					for(const sExt of ext) {
+						if(this.extension.has(sExt)) {
+							merge(cloneDeep(this.extension.get(sExt)), test);
+						}
+					}
+				}
+				else if(is(ext) === 'string') {
+					if(this.extension.has(ext)) {
+						merge(cloneDeep(this.extension.get(ext)), test);
+					}
+				}
+				Reflect.deleteProperty(test, 'extends');
+			}
 			this.tests.push(merge(cloneDeep(this.payload), test));
 		});
 		return this;
