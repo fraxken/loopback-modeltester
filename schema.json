@@ -76,7 +76,31 @@
 					},
 					"properties": {
 						"description": "All body properties expected",
-						"type": "object"
+						"type": "object",
+						"patternProperties": {
+							".*": {
+								"oneOf": [
+									{
+										"type": "object",
+										"additionalProperties": false,
+										"required": ["type"],
+										"properties": {
+											"type": {
+												"type": "string",
+												"description": "Expected response body Type (JavaScript)"
+											},
+											"value": {
+												"description": "Property expected value"
+											}
+										}
+									}, 
+									{
+										"type": "string",
+										"description": "Expected response body Type (JavaScript)"
+									}
+								]
+							}
+						}
 					}
 				},
 				"additionalProperties": false
