@@ -104,6 +104,9 @@ class loopbackTest extends events {
 				if(Reflect.has(E, 'response')) {
 					delete E.response;
 				}
+				if(Reflect.has(E, 'options')) {
+					delete E.options;
+				}
 				this.emit('error', E);
 			}
 			if(!is.nullOrUndefined(this._after)) {
@@ -421,11 +424,16 @@ class loopbackTest extends events {
 				}
 			}
 			catch(E) {
-				this._dump("Request options", reqOptions);
-				this._dump("Context", this.context);
-				this._dump("Body", body);
-				this._dump("Headers", headers);
-				throw E;
+				statusCode = E.statusCode;
+				body = E.response.body;
+				headers = E.response.headers;
+				if(statusCode === 200) {
+					this._dump("Request options", reqOptions);
+					this._dump("Context", this.context);
+					this._dump("Body", body);
+					this._dump("Headers", headers);
+					throw E;
+				}
 			}
 
 			// Check expected response statusCode
