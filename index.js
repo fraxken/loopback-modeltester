@@ -434,6 +434,10 @@ class loopbackTest extends events {
 					this._dump("Headers", headers);
 					throw E;
 				}
+				else if(debug) {
+					this._dump("Body", body);
+					this._dump("Headers", headers);
+				}
 			}
 
 			// Check expected response statusCode
