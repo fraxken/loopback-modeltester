@@ -6,6 +6,8 @@ const { basename } = require("path");
 const { performance } = require('perf_hooks');
 const assert = require("assert");
 const events = require('events');
+const readline = require('readline');
+
 
 // Require npm Packages
 const { has, get, cloneDeep, merge, isEqual } = require("lodash");
@@ -24,6 +26,12 @@ const {
 	gray,
 	white
 } = chalk.bold;
+
+// create readline Interface
+const rl = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout
+});
 
 // Variable REGEXP
 const variableRegexp = /\${([a-zA-Z0-9._-]+)}/g;
@@ -67,7 +75,7 @@ class loopbackTest extends events {
 	 * @constructor
 	 * @param {*} app Loopback server application
 	 * @param {String} basePath API BasePath
-	 * @param {String=} baseModelName baseModelName
+	 * @param {String=} baseModelName baseModelName (used to get dataSource in after/before)
 	 *
 	 * @throws {TypeError}
 	 */
@@ -149,7 +157,7 @@ class loopbackTest extends events {
 	/**
 	 * @memberof loopbackTest
 	 * @public
-	 * @param {Function} before function
+	 * @param {Function} fn function
 	 */
 	set before(fn) {
 		if(!is.asyncFunction(fn)) {
@@ -228,11 +236,12 @@ class loopbackTest extends events {
 				if(is(value) === "string") {
 					value = this._getContextVariable(value);
 				}
-				if(!is.nullOrUndefined(value) && !isEqual(bodyValue, value)) {
+				const valueIsNotDefined = is.nullOrUndefined(value);
+				if(valueIsNotDefined === false && !isEqual(bodyValue, value)) {
 					throw new Error(`Variable ${info(key)} value should be ${ok(value)} but was detected as ${error(bodyValue)}`);
 				}
-				console.log(`│     ├── ${white(key)}: ${ok(type)}`);
- 			}
+				console.log(`│     ├── ${white(key)}: ${ok(type)} -> ${info(!valueIsNotDefined ? value : 'N/D')}`);
+			}
 		}
 		console.log("│");
 	}
@@ -312,7 +321,7 @@ class loopbackTest extends events {
 	 * @desc Get variable in Regexp (shorthand private method)
 	 * @param {!String} varStr variable to handle!
 	 * @returns {void|String} Context variable!
-	 * 
+	 *
 	 * @throws {TypeError}
 	 */
 	_getContextVariable(varStr) {
@@ -342,12 +351,12 @@ class loopbackTest extends events {
 		const baseUrl = this.app.get("url").replace(/\/$/, "");
 		let testIndex = 0;
 
-		for(const test of this.tests) {
+		runTests: for(const test of this.tests) {
 			testIndex++;
 			performance.mark(`start_${testIndex}`);
 			console.log(`\n\n${white("Running test: id")} ${ok(testIndex)} - ${fOk(test.title) || "[NO TITLE]"}`);
 			console.log(gray("─────────────────────────────────────────────────────"));
-			
+
 
 			if (test.skip) {
 				console.log(`├── ${warn("Test skipped...")}`);
@@ -389,7 +398,7 @@ class loopbackTest extends events {
 				}
 				const formName = is.nullOrUndefined(file.form_name) ? "file" : file.form_name;
 				const name = basename(file.path);
-				reqOptions.formData = { 
+				reqOptions.formData = {
 					name,
 					[formName]: {
 						value: createReadStream(file.path),
@@ -442,7 +451,7 @@ class loopbackTest extends events {
 
 			// Check expected response statusCode
 			assert.equal(statusCode, expect.statusCode,
-				`Invalid response statusCode. Should be ${ok(expect)} but returned code ${error(statusCode)}`
+				`Invalid response statusCode. Should be ${ok(expect.statusCode)} but returned code ${error(statusCode)}`
 			);
 			console.log(`├── ${white("statusCode")}: ${ok(expect.statusCode)}`);
 
@@ -464,10 +473,32 @@ class loopbackTest extends events {
 			performance.mark(`end_${testIndex}`);
 			performance.measure(`execDuration_${testIndex}`, `start_${testIndex}`, `end_${testIndex}`);
 			const [measure] = performance.getEntriesByName(`execDuration_${testIndex}`);
+			if(Reflect.has(expect, 'duration')) {
+				if(measure.duration > expect.duration) {
+					throw new Error(
+						`${white("Expect baseline execution duration")}: ${ok(`${expect.duration}ms`)} but was ${error(measure.duration)}`
+					);
+				}
+			}
 			console.log(`├── ${white("Execution time (ms)")}: ${warn(`${measure.duration}ms`)}`);
+
+			// Break
+			if(test.break) {
+				const breakRet = await new Promise((resolve) => {
+					rl.question(`\n${error('Do you want to continue the test ? (Y/N) ')}`, (answer) => {
+						answer = answer.toLowerCase();
+						rl.close();
+						resolve(answer);
+					});
+				});
+				if(breakRet !== "y") {
+					console.log(warn('Test breaked!'));
+					break runTests;
+				}
+			}
 		}
 
-		console.log(`\n\n${ok("All tests successfully passed!")}`);
+		console.log(`\n\n${ok("All tests passed!")}`);
 	}
 
 	/**

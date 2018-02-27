@@ -16,6 +16,10 @@
 					"type": "string"
 				}
 			},
+			"break": {
+				"type": "boolean",
+				"description": "Pause/break the test"
+			},
 			"method": {
 				"type": "string",
 				"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -65,6 +69,10 @@
 					"statusCode": {
 						"description": "Expected response statusCode",
 						"type": "number"
+					},
+					"duration": {
+						"type": "number",
+						"description": "Expected baseline execution time in milliseconds of the request"
 					},
 					"bodyType": {
 						"description": "Expected response body Type (JavaScript)",
