@@ -1,124 +1,49 @@
-# loopback-modeltester
-Loopback 3.x JSON - Models Unit testing!
+# Loopback-modeltester
+Loopback model unit testing that work with JSON files
 
-# Installation
+## Getting Started
 
-```
-npm install loopback-modeltester [--save]
-```
+This package is available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
 
-# Usage example
+```bash
+$ npm i loopback-modeltester
+# or
+$ yarn add loopback-modeltester
+``` 
 
-Configure a JSON file with all use cases and routes to test : 
-
-```json
-[
-	{
-		"title": "CollectionManager - create collection",
-		"method": "POST",
-		"model": "CollectionManagers",
-		"url": "createCollection/testcol",
-		"debug": true,
-		"headers": {
-			"payload": "{ \"login\": \"!String\", \"age\": \"!Number\" }"
-		},
-		"expect": {
-			"statusCode": 200,
-			"bodyType": "Object",
-			"properties": {
-				"error": "null"
-			},
-			"headers": {
-				"content-type": "application/json"
-			}
-		}
-	},
-	{
-		"title": "Collection - get stats",
-		"method": "GET",
-		"model": "Collections",
-		"url": "stats/testcol",
-		"expect": {
-			"statusCode": 200,
-			"bodyType": "Object",
-			"properties": {
-				"error": "null",
-				"ok": {
-					"type": "Number",
-					"value": 1
-				}
-			},
-			"headers": {
-				"content-type": "application/json"
-			}
-		}
-	},
-	{
-		"title": "Collection - get options",
-		"method": "GET",
-		"model": "Collections",
-		"url": "options/testcol",
-		"expect": {
-			"statusCode": 200,
-			"bodyType": "Object",
-			"properties": {
-				"validator.$and[0].login": "Object",
-				"validator.$and[1].age": "Object"
-			},
-			"headers": {
-				"content-type": "application/json"
-			}
-		}
-	},
-	{
-		"title": "Collection - insert data",
-		"method": "POST",
-		"model": "Collections",
-		"url": "set/testcol",
-		"headers": {
-			"payload": "{ \"login\": \"testuser\", \"age\" : 23 }"
-		},
-		"expect": {
-			"statusCode": 200,
-			"bodyType": "Object",
-			"properties": {
-				"error": "null",
-				"insertedCount": {
-					"type": "Number",
-					"value": 1
-				},
-				"insertedId": "String"
-			},
-			"headers": {
-				"content-type": "application/json"
-			}
-		},
-		"variables": ["insertedId"]
-	}
-]
-```
-
-Create a test/test.js file at the root of your project with this content 
+The first step is to create a test/test.js file at the root of your project with the following content:
 
 ```js
-'use strict';
-
-// Setup env to development
+// Setup env to development (maybe required by your loopback configuration)
 process.env.NODE_ENV = 'development';
 
-// Require Package(s)
+// Require The package
 const loopbackTest = require('loopback-modeltester');
+
+// Require Loopback server (app)
 const app = require('../server/server');
-const modelTest = require('../server/model-tests.json');
 
+// Require one or multiple JSON that describe your tests!
+const modelTest = require('./model-tests.json');
+
+// Declare a new test ! ('api' is the REST base path of Loopback)
 const test = new loopbackTest(app, 'api');
-test.on('error', console.error);
-test.defaultHeaders({
-	defaultHeader: 'hello world!'
-});
-test.load(modelTest);
 
+// Catch error
+test.on('error', console.error);
+
+// Optionaly set a default payload for every tests!
+test.defaultPayload({
+    headers: {
+        foo: 'bar'
+    }
+});
+
+// Load your JSON test!
+test.load(modelTest);
 ```
+
+Find a complete JSON example in the root example repository.
 
 ## Documentation
 
@@ -128,6 +53,7 @@ For each tests, all followings keys are allowed. All fields based upon JavaScrip
 | --- | --- | --- | --- |
 | title | String | N.A | Test title |
 | skip | Boolean | false | Skip or not the test |
+| break | Boolean | false | Break or pause your test |
 | debug | Boolean | false | Debug the rest by logging headers and body properties |
 | method | String | GET | The default HTTP Verbose method |
 | model | String | N.A | The model name in the plural form |
@@ -136,11 +62,12 @@ For each tests, all followings keys are allowed. All fields based upon JavaScrip
 | expect | Object | N.A | The expected response from the request |
 | variables | Array | N.A | Variables to assign to the context based upon the Body response | 
 
-#### Expect properties
+### Expect properties
 
 | Key | Type | Default Value | Description |
 | --- | --- | --- | --- |
 | statusCode | Number | 200 | The expected HTTP status code |
+| duration | Number | N.A | The expected baseline duration of the HTTP Request |
 | bodyType | String | N.A | The expected body type (JavaScript) |
 | headers | Object | N.A | All headers key expected, with the value not matched explicitely |
 | properties | Object | N.A | All body properties expected |
@@ -158,10 +85,25 @@ Properties values can be JavaScript types or an Object. Take the following examp
 }
 ```
 
-#### Variables
+### Variables
 
 Variables assigned to the context can be used on different fields : 
 
 - URL
 - Headers values
 - Expected properties values
+
+## VSCode configuration
+
+If you want JSON completion, you can configure intellisence with JSON Schema. Edit your configuration and put this:
+
+```
+"json.schemas": [
+    {
+        "fileMatch": [
+            "*.lb_tests.json"
+        ],
+        "url": "./node_modules/loopback-modeltester/schema.json"
+    },
+]
+```
