@@ -1,0 +1,247 @@
+[
+	{
+		"title": "Profile - findOnRefog (unknow ESearchType)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{ \"type\": \"unknow\" }"
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (unknow Language)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{ \"language\": \"BE\" }"
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (level should be a number)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{ \"level\": \"2\" }"
+		},
+		"expect": {
+			"properties": {
+				"error.message": {
+					"type": "String",
+					"value": "level argument should be a number!"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (fields should be defined)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{}"
+		},
+		"expect": {
+			"properties": {
+				"error.message": {
+					"type": "String",
+					"value": "Cannot search on Refog without any fields arguments!"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (unknow fieldName)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{ \"fields\": { \"SIP_X_UID\": \"a88561\" } }"
+		},
+		"expect": {
+			"properties": {
+				"error.message": {
+					"type": "String",
+					"value": "Unknow field name SIP_X_UID for Type Personne"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (invalid field value)",
+		"extends": ["findOnRefog"],
+		"headers": {
+			"searchParams": "{ \"fields\": { \"SIP_I_UID\": 10 } }"
+		},
+		"expect": {
+			"properties": {
+				"error.message": {
+					"type": "String",
+					"value": "Search params (field values) can be only typeof String"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findOnRefog (no entry matched)",
+		"model": "profiles",
+		"url": "findOnRefog",
+		"headers": {
+			"searchParams": "{ \"fields\": { \"SIP_I_UID\": \"x500085\" } }"
+		},
+		"expect": {
+			"properties": {
+				"count": {
+					"type": "Number",
+					"value": 0
+				},
+				"rows": "Array",
+				"rows.length": {
+					"type": "Number",
+					"value": 0
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (unknow field name)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"randomfield\": \"${defaultUID}\" }"
+		},
+		"expect": {
+			"statusCode": 500,
+			"properties": {
+				"error": "String"
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (invalid field value)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"uid\": true }"
+		},
+		"expect": {
+			"statusCode": 500,
+			"properties": {
+				"error": {
+					"type": "String",
+					"value": "Search params (field value) can be only typeof String"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (by uid)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"uid\": \"${defaultUID}\" }",
+			"forceUpdate": false,
+			"reverseOperator": false,
+			"level": 1,
+			"limit": 1
+		},
+		"expect": {
+			"properties": {
+				"error": "null",
+				"nom": {
+					"type": "String",
+					"value": "GENTILHOMME"
+				},
+				"prenom": {
+					"type": "String",
+					"value": "Thomas"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (by uid with forceUpdate)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"uid\": \"${defaultUID}\" }",
+			"forceUpdate": true,
+			"level": 2
+		},
+		"expect": {
+			"properties": {
+				"error": "null",
+				"nom": {
+					"type": "String",
+					"value": "GENTILHOMME"
+				},
+				"prenom": {
+					"type": "String",
+					"value": "Thomas"
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (by nom and prenom)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"nom\": \"GENTILHOMME\", \"prenom\": \"Thomas\"  }",
+			"level": 2
+		},
+		"expect": {
+			"properties": {
+				"error": "null",
+				"nbRow": {
+					"type": "Number",
+					"value": 1
+				},
+				"data": "Array",
+				"data.length": {
+					"type": "Number",
+					"value": 1
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (by nom or prenom with limit 10)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"nom\": \"GENTILHOMME\", \"prenom\": \"Thomas\"  }",
+			"reverseOperator": true,
+			"level": 1,
+			"limit": 10
+		},
+		"expect": {
+			"properties": {
+				"error": "null",
+				"nbRow": {
+					"type": "Number",
+					"value": 10
+				},
+				"data": "Array",
+				"data.length": {
+					"type": "Number",
+					"value": 10
+				}
+			}
+		}
+	},
+	{
+		"title": "Profile - findPersonne (by prenom)",
+		"model": "profiles",
+		"url": "findPersonne",
+		"headers": {
+			"searchParams": "{ \"prenom\": \"xd\"  }",
+			"level": 2
+		},
+		"expect": {
+			"properties": {
+				"error": "null",
+				"nbRow": {
+					"type": "Number",
+					"value": 1
+				},
+				"data": "Array",
+				"data[0].nom": {
+					"type": "String",
+					"value": "CHEN"
+				}
+			}
+		}
+	}
+]
