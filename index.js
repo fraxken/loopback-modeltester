@@ -402,6 +402,10 @@ class loopbackTest extends events {
 				this._hydrateObject(test.form);
 				Reflect.set(reqOptions, 'form', test.form);
 			}
+			if(is(test.formData) === 'Object') {
+				this._hydrateObject(test.formData);
+				Reflect.set(reqOptions, 'formData', test.formData);
+			}
 			reqOptions = Object.assign(cloneDeep(IDefaultRequest), reqOptions);
 
 			// Upload a file!
@@ -411,7 +415,7 @@ class loopbackTest extends events {
 				}
 				const formName = is.nullOrUndefined(file.form_name) ? "file" : file.form_name;
 				const name = basename(file.path);
-				reqOptions.formData = {
+				reqOptions.formData = Object.assign(reqOptions.formData || {}, {
 					name,
 					[formName]: {
 						value: createReadStream(file.path),
@@ -420,7 +424,7 @@ class loopbackTest extends events {
 							contentType: mime.lookup(name)
 						}
 					}
-				};
+				});
 			}
 
 			// Debug the request options !
