@@ -341,6 +341,23 @@ class loopbackTest extends events {
 	}
 
 	/**
+	 * @private
+	 * @method _hydrateObject
+	 * @desc Hydrate an object
+	 * @param {any!} focusObject Object to hydrate
+	 * @returns {void} Return void
+	 */
+	_hydrateObject(focusObject) {
+		for(const key of Object.keys(focusObject)) {
+			const value = Reflect.get(focusObject, key);
+			if (is(value) !== "string") {
+				continue;
+			}
+			Reflect.set(focusObject, key, this._getContextVariable(value));
+		}
+	}
+
+	/**
 	 * @public
 	 * @async
 	 * @method run
@@ -357,7 +374,7 @@ class loopbackTest extends events {
 			console.log(`\n\n${white("Running test: id")} ${ok(testIndex)} - ${fOk(test.title) || "[NO TITLE]"}`);
 			console.log(gray("─────────────────────────────────────────────────────"));
 
-
+			// Skip test!
 			if (test.skip) {
 				console.log(`├── ${warn("Test skipped...")}`);
 				continue;
@@ -369,26 +386,22 @@ class loopbackTest extends events {
 			}
 			test.url = this._getContextVariable(test.url);
 
-			// Hydrate context for headers keys!
-			if (is(test.headers) === 'Object') {
-				for(const key of Object.keys(test.headers)) {
-					const value = Reflect.get(test.headers, key);
-					if (is(value) !== "string") {
-						continue;
-					}
-					Reflect.set(test.headers, key, this._getContextVariable(value));
-				}
-			}
-
 			// Define the HTTP Request!
 			let reqOptions = {
 				method: test.method,
 				url: `${baseUrl}/${this.basePath}${is(test.model) === "string" ? `/${test.model}` : ""}/${test.url}`,
-				formData: test.formData,
 				body: test.body,
-				headers: test.headers,
 				qs: test.qs
 			};
+			// Hydrate context for headers keys!
+			if (is(test.headers) === 'Object') {
+				this._hydrateObject(test.headers);
+				Reflect.set(reqOptions, 'headers', test.headers);
+			}
+			if(is(test.form) === 'Object') {
+				this._hydrateObject(test.form);
+				Reflect.set(reqOptions, 'form', test.form);
+			}
 			reqOptions = Object.assign(cloneDeep(IDefaultRequest), reqOptions);
 
 			// Upload a file!

@@ -62,6 +62,10 @@
 				"description": "Request headers...",
 				"type": "object"
 			},
+			"form": {
+				"description": "Request formData...",
+				"type": "object"
+			},
 			"expect": {
 				"type": "object",
 				"description": "Describe how do you expect the response to be!",
