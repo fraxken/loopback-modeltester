@@ -45,6 +45,55 @@ test.load(modelTest);
 
 Find a complete JSON example in the root example repository.
 
+## API Example
+
+### Set a context variable before test execution
+
+```js
+test.setVar('defaultUser', 'GENTILHOMME Thomas');
+// Now use ${defaultUser} in your test!
+```
+
+### Extend
+
+Extend a specific test with some properties (it will merge every properties).
+
+```js
+test.extend('customPayload01', {
+    expect: {
+        statusCode: 500,
+        duration: 100,
+        bodyType: 'Object',
+        properties: {
+            error: {
+                type: 'String',
+                value: 'An error occured on the Server!'
+            }
+        }
+    }
+});
+```
+And use it on your test by using the property `extends`
+
+### Before/After test execution
+
+Execute action before or after the test by defining after or/and before AsyncFunction setter.
+
+```js
+const test = new loopbackTest(app, 'db', 'Collection');
+test.after = async function deleteCols(DB) {
+	const colList = await DB.listCollections().toArray();
+	for(const col of colList) {
+		if(col.name === 'system.indexes') {
+			continue;
+		}
+		await DB.dropCollection(col.name);
+	}
+};
+```
+
+> **Note:** DB Argument is only available when a defaultModel name has been given in the constructor
+
 ## Documentation
 
 For each tests, all followings keys are allowed. All fields based upon JavaScript types are checked with the lib @sindresorhus/is (So check this package to be sure you entered the right type).
@@ -57,6 +106,7 @@ For each tests, all followings keys are allowed. All fields based upon JavaScrip
 | debug | Boolean | false | Debug the rest by logging headers and body properties |
 | method | String | GET | The default HTTP Verbose method |
 | model | String | N.A | The model name in the plural form |
+| extends | Array | N.A | Array of extensions name |
 | url | String | N.A | The request url |
 | file | Object | N.A | FormData to upload a file |
 | expect | Object | N.A | The expected response from the request |
