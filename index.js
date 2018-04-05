@@ -169,7 +169,7 @@ class loopbackTest extends events {
 	/**
 	 * @memberof loopbackTest
 	 * @public
-	 * @param {Function} after function
+	 * @param {Function} fn function
 	 */
 	set after(fn) {
 		if(!is.asyncFunction(fn)) {
