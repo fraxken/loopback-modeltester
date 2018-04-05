@@ -106,10 +106,12 @@ For each tests, all followings keys are allowed. All fields based upon JavaScrip
 | debug | Boolean | false | Debug the rest by logging headers and body properties |
 | method | String | GET | The default HTTP Verbose method |
 | model | String | N.A | The model name in the plural form |
-| extends | Array | N.A | Array of extensions name |
+| extends | Array<String> | N.A | Array of extensions name |
 | url | String | N.A | The request url |
 | file | Object | N.A | FormData to upload a file |
 | expect | Object | N.A | The expected response from the request |
+| form | Object | N.A | Request form (url-encoded).. |
+| formData | Object | N.A | Request formData |
 | variables | Array | N.A | Variables to assign to the context based upon the Body response | 
 
 ### Expect properties
