@@ -1,4 +1,4 @@
-"use strict";
+require('make-promises-safe'); // installs an 'unhandledRejection' handler;
 
 // Require Node.JS package
 const { createReadStream } = require("fs");
