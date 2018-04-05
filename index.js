@@ -109,12 +109,8 @@ class loopbackTest extends events {
 				await this.run();
 			}
 			catch(E) {
-				if(Reflect.has(E, 'response')) {
-					delete E.response;
-				}
-				if(Reflect.has(E, 'options')) {
-					delete E.options;
-				}
+				Reflect.deleteProperty(E, 'response');
+				Reflect.deleteProperty(E, 'options');
 				this.emit('error', E);
 			}
 			if(!is.nullOrUndefined(this._after)) {
