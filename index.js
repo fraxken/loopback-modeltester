@@ -3,7 +3,7 @@ require('make-promises-safe'); // installs an 'unhandledRejection' handler;
 // Require Node.JS package
 const { createReadStream } = require("fs");
 const { basename } = require("path");
-const { performance } = require('perf_hooks');
+const { performance, PerformanceObserver } = require('perf_hooks');
 const assert = require("assert");
 const events = require('events');
 const readline = require('readline');
@@ -484,8 +484,16 @@ class loopbackTest extends events {
 			}
 
 			performance.mark(`end_${testIndex}`);
-			performance.measure(`execDuration_${testIndex}`, `start_${testIndex}`, `end_${testIndex}`);
-			const [measure] = performance.getEntriesByName(`execDuration_${testIndex}`);
+			const measure = await new Promise((resolve) => {
+				const obs = new PerformanceObserver((items, observer) => {
+					resolve(items.getEntries()[0]);
+					performance.clearMarks();
+					observer.disconnect();
+				});
+				obs.observe({ entryTypes: ['measure'] });
+				performance.measure(`execDuration_${testIndex}`, `start_${testIndex}`, `end_${testIndex}`);
+			});
+
 			if(Reflect.has(expect, 'duration')) {
 				if(measure.duration > expect.duration) {
 					throw new Error(
