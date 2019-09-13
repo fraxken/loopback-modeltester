@@ -1,5 +1,4 @@
 # Loopback-modeltester
-
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/fraxken/loopback-modeltester/graphs/commit-activity)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/fraxken/loopback-modeltester/blob/master/LICENSE)
 
