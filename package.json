@@ -23,7 +23,7 @@
     "@sindresorhus/is": "^1.0.0",
     "chalk": "^2.3.0",
     "lodash": "^4.17.4",
-    "make-promises-safe": "^1.1.0",
+    "make-promises-safe": "^5.0.0",
     "mime-types": "^2.1.17",
     "request-promise": "^4.2.2"
   },
