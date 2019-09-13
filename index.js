@@ -1,4 +1,4 @@
-// Require Node.JS package
+// Require Node.js Dependencies
 const { createReadStream } = require("fs");
 const { basename } = require("path");
 const { performance, PerformanceObserver } = require('perf_hooks');
@@ -6,11 +6,10 @@ const assert = require("assert");
 const events = require('events');
 const readline = require('readline');
 
-
-// Require npm Packages
+// Require Third-party Dependencies
 const { has, get, cloneDeep, merge, isEqual } = require("lodash");
 const request = require("request-promise");
-const is = require("@sindresorhus/is");
+const is = require("@slimio/is");
 const mime = require("mime-types");
 const chalk = require("chalk");
 

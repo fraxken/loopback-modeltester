@@ -16,15 +16,15 @@
   "author": "GENTILHOMME Thomas",
   "license": "MIT",
   "files": [
-	  "index.js",
-	  "schema.json"
+    "index.js",
+    "schema.json"
   ],
   "bugs": {
     "url": "https://github.com/fraxken/loopback-modeltester/issues"
   },
   "homepage": "https://github.com/fraxken/loopback-modeltester#readme",
   "dependencies": {
-    "@sindresorhus/is": "^1.0.0",
+    "@slimio/is": "^1.5.1",
     "chalk": "^2.3.0",
     "lodash": "^4.17.4",
     "mime-types": "^2.1.17",
