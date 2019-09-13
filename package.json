@@ -15,6 +15,10 @@
   },
   "author": "GENTILHOMME Thomas",
   "license": "MIT",
+  "files": [
+	  "index.js",
+	  "schema.json"
+  ],
   "bugs": {
     "url": "https://github.com/fraxken/loopback-modeltester/issues"
   },
