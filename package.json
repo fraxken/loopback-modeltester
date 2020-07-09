@@ -26,7 +26,7 @@
   "dependencies": {
     "@slimio/is": "^1.5.1",
     "chalk": "^2.3.0",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.16",
     "mime-types": "^2.1.17",
     "request-promise": "^4.2.2"
   },
